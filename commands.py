@@ -19,7 +19,7 @@ class CreateBookmarksTableCommand: # команда для создания та
 
 class AddBookmarkCommand: # команда добавления закладки
     def execute(self, data):
-        data['date_added'] = datetime.utcnow().isoformat()  # <1> добавляет текущую дату и время при добавлении записи
+        data['date_added'] = datetime.today().strftime('%d.%m.%Y')  #.isoformat()  # <1> добавляет текущую дату и время при добавлении записи
         db.add('bookmarks', data)  # <2>
         return 'Bookmark added!'  # <3>
 
