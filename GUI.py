@@ -23,19 +23,79 @@ software_list = [
     [11, "Java"],
 ]
 
+def print_bookmarks(bookmarks):
+    for bookmark in bookmarks:
+        print('\t'.join(
+            str(field) if field else ''
+            for field in bookmark
+        ))
+
+class Option:  # подключение текста меню к командам бизнес-логики
+    def __init__(self, name, command, prep_call=None):
+        self.name = name  # <1> имя, показываемое в меню
+        self.command = command  # <2> экземпляр выполняемой программы
+        self.prep_call = prep_call  # <3> необязательный подготовительный шаг, который вызывается перед выполнением
+        # программы
+
+    def _handle_message(self, message):
+        if isinstance(message, list):
+            print_bookmarks(message)
+        else:
+            print(message)
+
+    def choose(self):  # <4> вызывается, когда вариант действия выбран из меню
+        data = self.prep_call() if self.prep_call else None  # <5> вызывает подготовительный шаг, если он указан
+        message = self.command.execute(
+            data) if data else self.command.execute()  # <6> выполняет команду, переданную в данных из
+        # подготовительного шага
+        self._handle_message(message)
+
+    def __str__(self):  # <7> представляет вариант действия в формате имени вместо дефолтного поведения Python
+        return self.name
 
 # def on_tree_selection_changed(selection):  # функция показывает значение в выделенном пользователем столбце и строке
 #     model, treeiter = selection.get_selected()
 #     if treeiter is not None:
 #         print("You selected", model[treeiter][1])
 
+# name_note_dict = {
+#     'title': 'Заметка1',
+#     'url': 'Address',
+#     'notes': 'note1'
+# }
+#
+# def get_user_input(label):  # <1> общая функция, которая предлагает пользователя ввести данные
+#     if label in name_note_dict:
+#         value = name_note_dict(label)  # <2> получает первоначальный ввод от пользователя
+#     return value
+#
+# def get_new_bookmark_data():  # <4> функция, которая получает необходимые данные для добавления новой закладки
+#     return {
+#         'title': get_user_input('Title'),
+#         'url': get_user_input('URL'),
+#         'notes': get_user_input('Notes'),  # <5> примечания для закладки не являются обязательными,
+#         # поэтому не продолжает предлагать их ввести
+#     }
+
+def get_new_bookmark_data():  # <4> функция, которая получает необходимые данные для добавления новой закладки
+    return {
+        'title': 'Заметка1',
+        'url': 'Address',
+        'notes': 'note1',  # <5> примечания для закладки не являются обязательными,
+        # поэтому не продолжает предлагать их ввести
+    }
+
+
+def get_bookmark_id_for_deletion():  # <6> получает необходимую информацию для удаления закладки
+    return '3'
 
 class Handler:
     def get_note_clicked_cb(self, button):
-        software_list = [len(lStore_now) + 1, entry.get_text()]
-        # for row in lStore_now:  # цикл вывода на печать всех значений списка
-        #     print(row[:])
-        lStore_now.append(list(software_list))
+        Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call=get_new_bookmark_data).choose()
+        # software_list = [len(lStore_now) + 1, entry.get_text()]
+        # # for row in lStore_now:  # цикл вывода на печать всех значений списка
+        # #     print(row[:])
+        # lStore_now.append(list(software_list))
 
     def change_note_clicked_cb(self, button):
         selection = tree_now.get_selection()  # выбор таблицы
@@ -59,17 +119,20 @@ class Handler:
                 # заданной строке тестом из поля entry
 
     def delete_note_clicked_cb(self, button):
-        # lStore_now.clear()
-        selection = tree_now.get_selection()
-        num = selection.count_selected_rows()
-        if num > 0:
-            for i in range(len(lStore_now)):
-                path = Gtk.TreePath(i)
-                treeiter = lStore_now.get_iter(path)
-                if selection.iter_is_selected(treeiter) == True:
-                    lStore_now.remove(treeiter)
-                    self.rename_number_cell()
-                    return
+        Option('Delete a bookmark', commands.DeleteBookmarkCommand(), prep_call=get_bookmark_id_for_deletion).choose()
+        #chosen_option = get_option_choice(Option)
+        #chosen_option.choose()
+        # # lStore_now.clear()
+        # selection = tree_now.get_selection()
+        # num = selection.count_selected_rows()
+        # if num > 0:
+        #     for i in range(len(lStore_now)):
+        #         path = Gtk.TreePath(i)
+        #         treeiter = lStore_now.get_iter(path)
+        #         if selection.iter_is_selected(treeiter) == True:
+        #             lStore_now.remove(treeiter)
+        #             self.rename_number_cell()
+        #             return
 
 
 abuilder = Gtk.Builder()
@@ -105,4 +168,6 @@ sWindow_now.add(tree_now)
 
 Window.show_all()
 # whatis(tree_now.get_mode)
-Gtk.main()
+if __name__ == '__main__':
+    Gtk.main()
+    commands.CreateBookmarksTableCommand().execute()  # инициализация БД
