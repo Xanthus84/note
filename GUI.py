@@ -23,12 +23,17 @@ software_list = [
     [11, "Java"],
 ]
 
-def print_bookmarks(bookmarks):
-    for bookmark in bookmarks:
-        print('\t'.join(
-            str(field) if field else ''
-            for field in bookmark
-        ))
+# def print_bookmarks(bookmarks): #  вывод таблицы в командную строку
+#     for bookmark in bookmarks:
+#         print('\t'.join(
+#             str(field) if field else ''
+#             for field in bookmark
+#         ))
+
+def print_bookmarks(bookmarks): #  вывод таблицы в командную строку
+        for software_ref in bookmarks:
+            lStore_now.append(list(software_ref))
+
 
 class Option:  # подключение текста меню к командам бизнес-логики
     def __init__(self, name, command, prep_call=None):
@@ -87,11 +92,24 @@ def get_new_bookmark_data():  # <4> функция, которая получа�
 
 
 def get_bookmark_id_for_deletion():  # <6> получает необходимую информацию для удаления закладки
-    return '3'
+    selection = tree_now.get_selection()
+    num = selection.count_selected_rows()
+    if num > 0:
+        for i in range(len(lStore_now)):
+            path = Gtk.TreePath(i)
+            treeiter = lStore_now.get_iter(path)
+            if selection.iter_is_selected(treeiter) == True:
+                print(str(lStore_now.get_value(treeiter, 0)))
+                return str(lStore_now.get_value(treeiter, 0))
+    else:
+        return '0'
+
 
 class Handler:
     def get_note_clicked_cb(self, button):
         Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call=get_new_bookmark_data).choose()
+        lStore_now.clear()
+        Option('List bookmarks by date', commands.ListBookmarksCommand()).choose()
         # software_list = [len(lStore_now) + 1, entry.get_text()]
         # # for row in lStore_now:  # цикл вывода на печать всех значений списка
         # #     print(row[:])
@@ -120,9 +138,8 @@ class Handler:
 
     def delete_note_clicked_cb(self, button):
         Option('Delete a bookmark', commands.DeleteBookmarkCommand(), prep_call=get_bookmark_id_for_deletion).choose()
-        #chosen_option = get_option_choice(Option)
-        #chosen_option.choose()
-        # # lStore_now.clear()
+        lStore_now.clear()
+        Option('List bookmarks by date', commands.ListBookmarksCommand()).choose()
         # selection = tree_now.get_selection()
         # num = selection.count_selected_rows()
         # if num > 0:
@@ -149,13 +166,13 @@ sWindow_now = abuilder.get_object("scrolled_window_now")
 # textbuffer = text_now.get_buffer()
 # textbuffer.set_text('123')
 
-lStore_now = Gtk.ListStore(int, str)
-for software_ref in software_list:
-    lStore_now.append(list(software_ref))
+lStore_now = Gtk.ListStore(int, str, str, str, str)
+
+Option('List bookmarks by date', commands.ListBookmarksCommand()).choose()
 
 tree_now = Gtk.TreeView(model=lStore_now)
 for i, column_title in enumerate(
-        ["№", "Список срочных дел"]
+        ["№", "title", "url", "notes", "date"]
 ):
     renderer = Gtk.CellRendererText()
     column = Gtk.TreeViewColumn(column_title, renderer, text=i)
@@ -164,10 +181,12 @@ for i, column_title in enumerate(
 # select = tree_now.get_selection()  # выбор таблицы
 # select.connect("changed", on_tree_selection_changed)  # подключение сигнала выбранной строки
 
+
+
 sWindow_now.add(tree_now)
 
 Window.show_all()
-# whatis(tree_now.get_mode)
+#whatis(Gtk)
 if __name__ == '__main__':
     Gtk.main()
     commands.CreateBookmarksTableCommand().execute()  # инициализация БД
