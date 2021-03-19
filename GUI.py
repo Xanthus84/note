@@ -9,20 +9,6 @@ from gi.repository import Gtk
 
 whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
 
-software_list = [
-    [1, "C++"],
-    [2, "Java"],
-    [3, "Python"],
-    [4, "Java"],
-    [5, "C++"],
-    [6, "C++"],
-    [7, "Python"],
-    [8, "C"],
-    [9, "C"],
-    [10, "C"],
-    [11, "Java"],
-]
-
 # def print_bookmarks(bookmarks): #  вывод таблицы в командную строку
 #     for bookmark in bookmarks:
 #         print('\t'.join(
@@ -46,12 +32,20 @@ class Option:  # подключение текста меню к команда�
         if isinstance(message, list):
             print_bookmarks(message)
         else:
-            print(message)
+            entry_sabject.set_text(message)
 
     def choose(self):  # <4> вызывается, когда вариант действия выбран из меню
         data = self.prep_call() if self.prep_call else None  # <5> вызывает подготовительный шаг, если он указан
         message = self.command.execute(
             data) if data else self.command.execute()  # <6> выполняет команду, переданную в данных из
+        # подготовительного шага
+        self._handle_message(message)
+
+    def choose_update(self):  # <4> вызывается, когда вариант действия выбран из меню
+        note = entry.get_text()
+        data = self.prep_call() if self.prep_call else None  # <5> вызывает подготовительный шаг, если он указан
+        message = self.command.execute(
+            data, note) if data else self.command.execute()  # <6> выполняет команду, переданную в данных из
         # подготовительного шага
         self._handle_message(message)
 
@@ -69,10 +63,8 @@ class Option:  # подключение текста меню к команда�
 #     'notes': 'note1'
 # }
 #
-# def get_user_input(label):  # <1> общая функция, которая предлагает пользователя ввести данные
-#     if label in name_note_dict:
-#         value = name_note_dict(label)  # <2> получает первоначальный ввод от пользователя
-#     return value
+def get_user_input(label):  # <1> общая функция, которая предлагает пользователя ввести данные
+        return entry.get_text()
 #
 # def get_new_bookmark_data():  # <4> функция, которая получает необходимые данные для добавления новой закладки
 #     return {
@@ -84,10 +76,10 @@ class Option:  # подключение текста меню к команда�
 
 def get_new_bookmark_data():  # <4> функция, которая получает необходимые данные для добавления новой закладки
     return {
-        'title': 'Заметка1',
-        'url': 'Address',
-        'notes': 'note1',  # <5> примечания для закладки не являются обязательными,
-        # поэтому не продолжает предлагать их ввести
+        'title': get_user_input('Title'),
+        # 'url': 'Address',
+        # 'notes': 'note1',  # <5> примечания для закладки не являются обязательными,
+        # # поэтому не продолжает предлагать их ввести
     }
 
 
@@ -99,11 +91,10 @@ def get_bookmark_id_for_deletion():  # <6> получает необходиму
             path = Gtk.TreePath(i)
             treeiter = lStore_now.get_iter(path)
             if selection.iter_is_selected(treeiter) == True:
-                print(str(lStore_now.get_value(treeiter, 0)))
+                #print(str(lStore_now.get_value(treeiter, 0)))
                 return str(lStore_now.get_value(treeiter, 0))
     else:
         return '0'
-
 
 class Handler:
     def get_note_clicked_cb(self, button):
@@ -116,18 +107,21 @@ class Handler:
         # lStore_now.append(list(software_list))
 
     def change_note_clicked_cb(self, button):
-        selection = tree_now.get_selection()  # выбор таблицы
-        num = selection.count_selected_rows()  # проверка, выделена ли хотя бы одна строка
-        if num > 0:
-            if not entry.get_text() == '':
-                for i in range(len(lStore_now)):  # цикл по значениям списка
-                    path = Gtk.TreePath(i)  # перебор строк с присвоением в path
-                    treeiter = lStore_now.get_iter(path)  # получение iter, соответствующее path
-                    if selection.iter_is_selected(treeiter) == True:  # проверка условия, выделена ли строка
-                        # print(lStore_now.get_value(treeiter, 1)) # получить значение первого столбца по заданной строке
-                        lStore_now.set_value(treeiter, 1, entry.get_text())  # изменяет значение первого столбца в
-                        # заданной строке тестом из поля entry
-                        return
+        Option('Update a bookmark', commands.UpdateBookmarkCommand(), prep_call=get_bookmark_id_for_deletion).choose_update()
+        lStore_now.clear()
+        Option('List bookmarks by date', commands.ListBookmarksCommand()).choose()
+        # selection = tree_now.get_selection()  # выбор таблицы
+        # num = selection.count_selected_rows()  # проверка, выделена ли хотя бы одна строка
+        # if num > 0:
+        #     if not entry.get_text() == '':
+        #         for i in range(len(lStore_now)):  # цикл по значениям списка
+        #             path = Gtk.TreePath(i)  # перебор строк с присвоением в path
+        #             treeiter = lStore_now.get_iter(path)  # получение iter, соответствующее path
+        #             if selection.iter_is_selected(treeiter) == True:  # проверка условия, выделена ли строка
+        #                 # print(lStore_now.get_value(treeiter, 1)) # получить значение первого столбца по заданной строке
+        #                 lStore_now.set_value(treeiter, 1, entry.get_text())  # изменяет значение первого столбца в
+        #                 # заданной строке тестом из поля entry
+        #                 return
 
     def rename_number_cell(self):
         for i in range(len(lStore_now)):  # цикл по значениям списка
@@ -160,19 +154,21 @@ Window = abuilder.get_object("main_window")
 Window.connect("destroy", Gtk.main_quit)
 
 entry = abuilder.get_object("entry_insert")
+entry_sabject = abuilder.get_object("entry_sabj")
 
 sWindow_now = abuilder.get_object("scrolled_window_now")
 # text_now = abuilder.get_object("text_now")
 # textbuffer = text_now.get_buffer()
 # textbuffer.set_text('123')
 
-lStore_now = Gtk.ListStore(int, str, str, str, str)
-
+lStore_now = Gtk.ListStore(int, str, str)
+#lStore_now = Gtk.ListStore(int, str, str, str, str)
 Option('List bookmarks by date', commands.ListBookmarksCommand()).choose()
+entry_sabject.set_text("Таблица загружена")
 
 tree_now = Gtk.TreeView(model=lStore_now)
 for i, column_title in enumerate(
-        ["№", "title", "url", "notes", "date"]
+        ["№", "Список срочных дел", "Дата"]
 ):
     renderer = Gtk.CellRendererText()
     column = Gtk.TreeViewColumn(column_title, renderer, text=i)
@@ -188,5 +184,5 @@ sWindow_now.add(tree_now)
 Window.show_all()
 #whatis(Gtk)
 if __name__ == '__main__':
-    Gtk.main()
     commands.CreateBookmarksTableCommand().execute()  # инициализация БД
+    Gtk.main()
