@@ -84,4 +84,5 @@ class DatabaseManager:
                 ''',
                 tuple(criteria.values()),
             )
+
 #whatis(tuple)
