@@ -11,17 +11,16 @@ class CreateBookmarksTableCommand: # команда для создания та
         db.create_table('bookmarks', {  # <3> создает таблица используя функцию create_table
             'id': 'integer primary key autoincrement', # id каждой записи автоматически наращивается по мере добавления записей
             'title': 'text not null', # not null требует, чтобы столбец был заполнен значениями
-            'url': 'text not null',
-            'notes': 'text',
+            # 'url': 'text not null',
+            # 'notes': 'text',
             'date_added': 'text not null',
         })
-
 
 class AddBookmarkCommand: # команда добавления закладки
     def execute(self, data):
         data['date_added'] = datetime.today().strftime('%d.%m.%Y')  #.isoformat()  # <1> добавляет текущую дату и время при добавлении записи
         db.add('bookmarks', data)  # <2>
-        return 'Bookmark added!'  # <3>
+        return 'Заметка загружена в БД!'  # <3>
 
 
 class ListBookmarksCommand: # команда для вызова на экран списка существующих закладок
@@ -35,9 +34,13 @@ class ListBookmarksCommand: # команда для вызова на экран
 class DeleteBookmarkCommand: # команда для удаления закладок
     def execute(self, data):
         db.delete('bookmarks', {'id': data})  # <1> delete принимает словарь имен столбцов и сопоставляет пары значений
-        return 'Bookmark deleted!'
+        return 'Заметка удалена!'
 
+class UpdateBookmarkCommand: # команда для удаления закладок
+    def execute(self, data, note):
+        db.update('bookmarks', {'id': data}, note)  # <1> delete принимает словарь имен столбцов и сопоставляет пары значений
+        return 'Заметка изменена!'
 
-class QuitCommand:
-    def execute(self):
-        sys.exit()  # <1> приводит к выходу из программы
+# class QuitCommand:
+#     def execute(self):
+#         sys.exit()  # <1> приводит к выходу из программы
