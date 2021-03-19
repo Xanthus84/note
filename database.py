@@ -72,4 +72,16 @@ class DatabaseManager:
             query,
             tuple(criteria.values()),
         )
+
+    def update(self, table_name, criteria, note):
+            placeholders = [f'{column} = ?' for column in criteria.keys()]
+            update_criteria = ' AND '.join(placeholders)
+            self._execute(
+                f'''
+                UPDATE {table_name}
+                SET title = "{note}"
+                WHERE {update_criteria};
+                ''',
+                tuple(criteria.values()),
+            )
 #whatis(tuple)
