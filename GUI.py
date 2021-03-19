@@ -4,10 +4,12 @@ import os
 from collections import OrderedDict
 
 import commands
+
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
 
 whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
+
 
 # def print_bookmarks(bookmarks): #  вывод таблицы в командную строку
 #     for bookmark in bookmarks:
@@ -16,9 +18,9 @@ whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
 #             for field in bookmark
 #         ))
 
-def print_bookmarks(bookmarks): #  вывод таблицы в командную строку
-        for software_ref in bookmarks:
-            lStore_now.append(list(software_ref))
+def print_bookmarks(bookmarks):  # вывод таблицы в командную строку
+    for software_ref in bookmarks:
+        lStore_now.append(list(software_ref))
 
 
 class Option:  # подключение текста меню к командам бизнес-логики
@@ -52,6 +54,7 @@ class Option:  # подключение текста меню к команда�
     def __str__(self):  # <7> представляет вариант действия в формате имени вместо дефолтного поведения Python
         return self.name
 
+
 # def on_tree_selection_changed(selection):  # функция показывает значение в выделенном пользователем столбце и строке
 #     model, treeiter = selection.get_selected()
 #     if treeiter is not None:
@@ -64,7 +67,9 @@ class Option:  # подключение текста меню к команда�
 # }
 #
 def get_user_input(label):  # <1> общая функция, которая предлагает пользователя ввести данные
-        return entry.get_text()
+    return entry.get_text()
+
+
 #
 # def get_new_bookmark_data():  # <4> функция, которая получает необходимые данные для добавления новой закладки
 #     return {
@@ -91,10 +96,11 @@ def get_bookmark_id_for_deletion():  # <6> получает необходиму
             path = Gtk.TreePath(i)
             treeiter = lStore_now.get_iter(path)
             if selection.iter_is_selected(treeiter) == True:
-                #print(str(lStore_now.get_value(treeiter, 0)))
+                # print(str(lStore_now.get_value(treeiter, 0)))
                 return str(lStore_now.get_value(treeiter, 0))
     else:
         return '0'
+
 
 class Handler:
     def get_note_clicked_cb(self, button):
@@ -107,7 +113,8 @@ class Handler:
         # lStore_now.append(list(software_list))
 
     def change_note_clicked_cb(self, button):
-        Option('Update a bookmark', commands.UpdateBookmarkCommand(), prep_call=get_bookmark_id_for_deletion).choose_update()
+        Option('Update a bookmark', commands.UpdateBookmarkCommand(),
+               prep_call=get_bookmark_id_for_deletion).choose_update()
         lStore_now.clear()
         Option('List bookmarks by date', commands.ListBookmarksCommand()).choose()
         # selection = tree_now.get_selection()  # выбор таблицы
@@ -127,8 +134,8 @@ class Handler:
         for i in range(len(lStore_now)):  # цикл по значениям списка
             path = Gtk.TreePath(i)  # перебор строк с присвоением в path
             treeiter = lStore_now.get_iter(path)  # получение iter, соответствующее path
-            lStore_now.set_value(treeiter, 0, i+1)  # изменяет значение первого столбца в
-                # заданной строке тестом из поля entry
+            lStore_now.set_value(treeiter, 0, i + 1)  # изменяет значение первого столбца в
+            # заданной строке тестом из поля entry
 
     def delete_note_clicked_cb(self, button):
         Option('Delete a bookmark', commands.DeleteBookmarkCommand(), prep_call=get_bookmark_id_for_deletion).choose()
@@ -160,13 +167,14 @@ sWindow_now = abuilder.get_object("scrolled_window_now")
 # text_now = abuilder.get_object("text_now")
 # textbuffer = text_now.get_buffer()
 # textbuffer.set_text('123')
-
-lStore_now = Gtk.ListStore(int, str, str)
-#lStore_now = Gtk.ListStore(int, str, str, str, str)
+lStore_now = abuilder.get_object("liststore1")
+# lStore_now = Gtk.ListStore(int, str, str)
+# lStore_now = Gtk.ListStore(int, str, str, str, str)
 Option('List bookmarks by date', commands.ListBookmarksCommand()).choose()
 entry_sabject.set_text("Таблица загружена")
 
-tree_now = Gtk.TreeView(model=lStore_now)
+tree_now = abuilder.get_object("tree_view1")
+# tree_now = Gtk.TreeView(model=lStore_now)
 for i, column_title in enumerate(
         ["№", "Список срочных дел", "Дата"]
 ):
@@ -178,11 +186,10 @@ for i, column_title in enumerate(
 # select.connect("changed", on_tree_selection_changed)  # подключение сигнала выбранной строки
 
 
-
-sWindow_now.add(tree_now)
+# sWindow_now.add(tree_now)
 
 Window.show_all()
-#whatis(Gtk)
+#whatis(lStore_now)
 if __name__ == '__main__':
     commands.CreateBookmarksTableCommand().execute()  # инициализация БД
     Gtk.main()
