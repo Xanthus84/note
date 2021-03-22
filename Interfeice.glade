@@ -2,13 +2,33 @@
 <!-- Generated with glade 3.38.2 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
-  <object class="GtkListStore" id="liststore1">
+  <object class="GtkListStore" id="liststore_medium">
+    <columns>
+      <!-- column-name gint1 -->
+      <column type="gint"/>
+      <!-- column-name gchararray1 -->
+      <column type="gchararray"/>
+      <!-- column-name gchararray2 -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
+  <object class="GtkListStore" id="liststore_now">
     <columns>
       <!-- column-name № -->
       <column type="gint"/>
-      <!-- column-name Список срочных дел -->
+      <!-- column-name Список -->
       <column type="gchararray"/>
       <!-- column-name Дата -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
+  <object class="GtkListStore" id="liststore_perspective">
+    <columns>
+      <!-- column-name guint1 -->
+      <column type="guint"/>
+      <!-- column-name gchararray1 -->
+      <column type="gchararray"/>
+      <!-- column-name gchararray2 -->
       <column type="gchararray"/>
     </columns>
   </object>
@@ -70,7 +90,7 @@
           </packing>
         </child>
         <child>
-          <object class="GtkNotebook">
+          <object class="GtkNotebook" id="note_book">
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="resize-mode">immediate</property>
@@ -85,10 +105,10 @@
                 <property name="propagate-natural-width">True</property>
                 <property name="propagate-natural-height">True</property>
                 <child>
-                  <object class="GtkTreeView" id="tree_view1">
+                  <object class="GtkTreeView" id="tree_view_now">
                     <property name="visible">True</property>
                     <property name="can-focus">True</property>
-                    <property name="model">liststore1</property>
+                    <property name="model">liststore_now</property>
                     <property name="search-column">0</property>
                     <child internal-child="selection">
                       <object class="GtkTreeSelection"/>
@@ -115,7 +135,15 @@
                 <property name="can-focus">True</property>
                 <property name="shadow-type">in</property>
                 <child>
-                  <placeholder/>
+                  <object class="GtkTreeView" id="tree_view_medium">
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="model">liststore_medium</property>
+                    <property name="search-column">0</property>
+                    <child internal-child="selection">
+                      <object class="GtkTreeSelection"/>
+                    </child>
+                  </object>
                 </child>
               </object>
               <packing>
@@ -141,7 +169,15 @@
                 <property name="can-focus">True</property>
                 <property name="shadow-type">in</property>
                 <child>
-                  <placeholder/>
+                  <object class="GtkTreeView" id="tree_view_perspective">
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="model">liststore_perspective</property>
+                    <property name="search-column">0</property>
+                    <child internal-child="selection">
+                      <object class="GtkTreeSelection"/>
+                    </child>
+                  </object>
                 </child>
               </object>
               <packing>
