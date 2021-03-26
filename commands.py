@@ -38,9 +38,13 @@ class DeleteBookmarkCommand: # команда для удаления закла
 
 class UpdateBookmarkCommand: # команда для удаления закладок
     def execute(self, name, data, note):
-        db.update(name, {'id': data}, note)  # <1> delete принимает словарь имен столбцов и сопоставляет пары значений
+        db.update(name, {'id': data}, note)  # <1> update принимает словарь имен столбцов и сопоставляет пары значений
         return 'Заметка изменена!'
 
+# class ResetIdBookmarkCommand: # команда для сброса автоинкремента
+#     def execute(self, name):
+#         db.reset_id(name) # <1> reset_id принимает словарь имен столбцов и сопоставляет пары значений
+#         return 'Нумерация обновлена!'
 # class QuitCommand:
 #     def execute(self):
 #         sys.exit()  # <1> приводит к выходу из программы
