@@ -84,5 +84,13 @@ class DatabaseManager:
                 ''',
                 tuple(criteria.values()),
             )
+    # def reset_id(self, table_name):
+    #     self._execute(
+    #         f'''
+    #         UPDATE SQLITE_SEQUENCE
+    #         SET seq = 0
+    #         WHERE name = "{table_name}";
+    #         '''
+    #     )
 
 #whatis(tuple)
