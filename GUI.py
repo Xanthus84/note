@@ -89,23 +89,26 @@ def rename_number_cell(data):  # функция сокрытия автоинк�
         for i in range(len(lStore_now)):  # цикл по значениям списка
             path = Gtk.TreePath(i)  # перебор строк с присвоением в path
             treeiter = lStore_now.get_iter(path)  # получение iter, соответствующее path
-            sort_now[i + 1] = lStore_now.get_value(treeiter, 0)  # изменяет значение первого столбца в
-            lStore_now.set_value(treeiter, 0, list(sort_now.keys())[i])
-            # заданной строке тестом из поля entry
+            sort_now[i + 1] = lStore_now.get_value(treeiter, 0)  # присваивает ключу словаря значение столбца id
+            lStore_now.set_value(treeiter, 0,
+                                 list(sort_now.keys())[i])  # устанавливает маску с порядковым номером на id
+
     if data == 'bookmarks_medium':
         for i in range(len(lStore_medium)):  # цикл по значениям списка
             path = Gtk.TreePath(i)  # перебор строк с присвоением в path
             treeiter = lStore_medium.get_iter(path)  # получение iter, соответствующее path
-            sort_medium[i + 1] = lStore_medium.get_value(treeiter, 0)  # изменяет значение первого столбца в
-            lStore_medium.set_value(treeiter, 0, list(sort_medium.keys())[i])
-            # заданной строке тестом из поля entry
+            sort_medium[i + 1] = lStore_medium.get_value(treeiter, 0)  # присваивает ключу словаря значение столбца id
+            lStore_medium.set_value(treeiter, 0,
+                                    list(sort_medium.keys())[i])  # устанавливает маску с порядковым номером на id
+
     if data == 'bookmarks_perspective':
         for i in range(len(lStore_perspective)):  # цикл по значениям списка
             path = Gtk.TreePath(i)  # перебор строк с присвоением в path
             treeiter = lStore_perspective.get_iter(path)  # получение iter, соответствующее path
-            sort_perspective[i + 1] = lStore_perspective.get_value(treeiter, 0)  # изменяет значение первого столбца в
-            lStore_perspective.set_value(treeiter, 0, list(sort_perspective.keys())[i])
-            # заданной строке тестом из поля entry
+            sort_perspective[i + 1] = lStore_perspective.get_value(treeiter,
+                                                                   0)  # присваивает ключу словаря значение столбца id
+            lStore_perspective.set_value(treeiter, 0, list(sort_perspective.keys())[
+                i])  # устанавливает маску с порядковым номером на id
 
     # for j in sort_now:
     #         #     path = Gtk.TreePath(j)  # перебор строк с присвоением в path
@@ -141,6 +144,13 @@ class Option:  # подключение текста меню к команда�
         # подготовительного шага
         self._handle_message(message)
 
+    def choose_update_note(self, name, note):  # <4> вызывается, когда вариант действия выбран из меню
+        data = self.prep_call() if self.prep_call else None  # <5> вызывает подготовительный шаг, если он указан
+        message = self.command.execute(
+            name, data, note) if data else self.command.execute(name)  # <6> выполняет команду, переданную в данных из
+        # подготовительного шага
+        self._handle_message(message)
+
     def choose_first_add(self, name):
         message = self.command.execute(name)
         get_width_height(message)
@@ -149,17 +159,12 @@ class Option:  # подключение текста меню к команда�
     #     return self.name
 
 
-# def on_tree_selection_changed(selection):  # функция показывает значение в выделенном пользователем столбце и строке
-#     model, treeiter = selection.get_selected()
-#     if treeiter is not None:
-#         print("You selected", model[treeiter][1])
+def on_tree_selection_changed(selection):  # функция показывает значение в выделенном пользователем столбце и строке
+    model, treeiter = selection.get_selected()
+    if treeiter is not None:
+        print("You selected", model[treeiter][1])
 
-# name_note_dict = {
-#     'title': 'Заметка1',
-#     'url': 'Address',
-#     'notes': 'note1'
-# }
-#
+
 def get_user_input(label):  # <1> общая функция, которая предлагает пользователя ввести данные
     return entry.get_text()
 
@@ -331,6 +336,32 @@ class Handler:
             entry_sabject.set_text("Выделите заметку!")
 
 
+def text_edited(widget, path, text):  # функция записи во второй столбец таблицы редактируемого значения
+    global count_width
+
+    if notebook.get_current_page() == 0:  # добавление заметки в таблицу срочных дел bookmarks
+        lStore_now[path][1] = text
+    elif notebook.get_current_page() == 1:  # добавление заметки в таблицу среднесрочных дел bookmarks_medium
+        lStore_medium[path][1] = text
+    elif notebook.get_current_page() == 2:  # добавление заметки в таблицу среднесрочных дел bookmarks_perspective
+        lStore_perspective[path][1] = text
+
+    if GetTextDimensions(text, 11, "Cantarell") > count_width:
+        count_width = GetTextDimensions(text, 11, "Cantarell")
+        resize_window()
+    else:
+        count_width = 0
+        Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add('bookmarks')
+        Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add('bookmarks_medium')
+        Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add(
+            'bookmarks_perspective')
+        resize_window()
+    Option('Update a bookmark', commands.UpdateBookmarkCommand(),
+           prep_call=get_bookmark_id_for_deletion).choose_update_note(get_table_name(), text)
+    clear_table()
+    Option('List bookmarks by date', commands.ListBookmarksCommand()).choose(get_table_name())
+    rename_number_cell(get_table_name())
+
 abuilder = Gtk.Builder()
 abuilder.add_from_file("Interfeice.glade")
 abuilder.connect_signals(Handler())
@@ -373,6 +404,9 @@ for i, column_title in enumerate(  # загрузка в дерево столб
     renderer = Gtk.CellRendererText()
     column = Gtk.TreeViewColumn(column_title, renderer, text=i)
     tree_now.append_column(column)
+    if i == 1:
+        renderer.set_property("editable", True)  # делает редактируемым строки столбца 1
+        renderer.connect("edited", text_edited)  # запоминает введенное значение в строку
 
 for i, column_title in enumerate(  # загрузка в дерево столбцов и присвоение им наименований
         ["№", "Список среднесрочных дел", "Дата"]
@@ -380,6 +414,9 @@ for i, column_title in enumerate(  # загрузка в дерево столб
     renderer = Gtk.CellRendererText()
     column = Gtk.TreeViewColumn(column_title, renderer, text=i)
     tree_medium.append_column(column)
+    if i == 1:
+        renderer.set_property("editable", True)  # делает редактируемым строки столбца 1
+        renderer.connect("edited", text_edited)  # запоминает введенное значение в строку
 
 for i, column_title in enumerate(  # загрузка в дерево столбцов и присвоение им наименований
         ["№", "Список перспективных дел", "Дата"]
@@ -387,6 +424,9 @@ for i, column_title in enumerate(  # загрузка в дерево столб
     renderer = Gtk.CellRendererText()
     column = Gtk.TreeViewColumn(column_title, renderer, text=i)
     tree_perspective.append_column(column)
+    if i == 1:
+        renderer.set_property("editable", True)  # делает редактируемым строки столбца 1
+        renderer.connect("edited", text_edited)  # запоминает введенное значение в строку
 
 # select = tree_now.get_selection()  # выбор таблицы
 # select.connect("changed", on_tree_selection_changed)  # подключение сигнала выбранной строки
@@ -419,4 +459,5 @@ if __name__ == '__main__':
     rename_number_cell('bookmarks_perspective')  # переименование строк в столбце для скрытия id
 
     entry_sabject.set_text("Таблицы загружены")  # вывод надписи в нижнее поле
+
     Gtk.main()
