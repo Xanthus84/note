@@ -1,45 +1,47 @@
-import sys
+# import sys
+from abc import ABC, abstractmethod
 from datetime import datetime
 
-from database import DatabaseManager
+from persistence import BookmarkDatabase
 
-db = DatabaseManager('bookmarks.db')  # <1> открывает БД, если таковой нет, то создает её в том же каталоге
-
-
-class CreateBookmarksTableCommand: # команда для создания таблицы в БД
-    def execute(self, name):  # <2> команда для создания таблицы с определенными заголовками при запуске приложения
-        db.create_table(name, {  # <3> создает таблица используя функцию create_table
-            'id': 'integer primary key autoincrement', # id каждой записи автоматически наращивается по мере добавления записей
-            'title': 'text not null', # not null требует, чтобы столбец был заполнен значениями
-            # 'url': 'text not null',
-            # 'notes': 'text',
-            'date_added': 'text not null',
-        })
-
-class AddBookmarkCommand: # команда добавления закладки
-    def execute(self, name, data):
-        data['date_added'] = datetime.today().strftime('%d.%m.%Y')  #.isoformat()  # <1> добавляет текущую дату и время при добавлении записи
-        db.add(name, data)  # <2>
-        return 'Заметка загружена в БД!'  # <3>
+persistence = BookmarkDatabase()  # <1> открывает БД, если таковой нет, то создает её в том же каталоге
 
 
-class ListBookmarksCommand: # команда для вызова на экран списка существующих закладок
+class Command(ABC):
+    @abstractmethod
+    def execute(self, name, data, note):
+        raise NotImplementedError('Команды должны реализовывать метод execute')
+
+
+class AddBookmarkCommand(Command):  # команда добавления закладки
+    def execute(self, name, data, note=None):
+        data['date_added'] = datetime.today().strftime(
+            '%d.%m.%Y')  # .isoformat()  # <1> добавляет текущую дату и время при добавлении записи
+        persistence.create(name, data)  # <2>
+        return True, None  # <3>
+
+
+class ListBookmarksCommand(Command):  # команда для вызова на экран списка существующих закладок
     def __init__(self, order_by='date_added'):  # <1>
         self.order_by = order_by
 
-    def execute(self, name):
-        return db.select(name, order_by=self.order_by).fetchall()  # <2>
+    def execute(self, name, data=None, note=None):
+        return True, persistence.list(name, order_by=self.order_by)  # <2>
 
 
-class DeleteBookmarkCommand: # команда для удаления закладок
-    def execute(self, name, data):
-        db.delete(name, {'id': data})  # <1> delete принимает словарь имен столбцов и сопоставляет пары значений
-        return 'Заметка удалена!'
+class DeleteBookmarkCommand(Command):  # команда для удаления закладок
+    def execute(self, name, data, note=None):
+        persistence.delete(name, data)  # <1> delete принимает словарь имен столбцов и сопоставляет пары значений
+        return True, None
 
-class UpdateBookmarkCommand: # команда для удаления закладок
+
+class UpdateBookmarkCommand(Command):  # команда для изменения закладок
     def execute(self, name, data, note):
-        db.update(name, {'id': data}, note)  # <1> update принимает словарь имен столбцов и сопоставляет пары значений
-        return 'Заметка изменена!'
+        # persistence.edit(name, data['id'], data['update'])  # <1> update принимает словарь имен столбцов и
+        # # сопоставляет пары значений
+        persistence.edit(name, data, note)  # <1> update принимает словарь имен столбцов и
+        # сопоставляет пары значений
+        return True, None
 
 # class ResetIdBookmarkCommand: # команда для сброса автоинкремента
 #     def execute(self, name):
