@@ -2,9 +2,10 @@
 import gi
 import ctypes
 import commands
+import keyboard
 
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 
 whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
 
@@ -26,10 +27,14 @@ def GetTextDimensions(text, points, font):  # считает ширину тек
     return size.cx  # возвращает ширину строки size.cx и высоту строки size.cy [size.cx, size.cy]
 
 
+# lStore_now_save = []
+
+
 def print_bookmarks(bookmarks):  # вывод таблицы в закладку
     if notebook.get_current_page() == 0:  # загрузка в таблицы в закладку срочных дел
         for software_ref in bookmarks:
             lStore_now.append(list(software_ref))
+            # lStore_now_save.append(list(software_ref))
     if notebook.get_current_page() == 1:  # загрузка в таблицы в закладку среднесрочных дел
         for software_ref in bookmarks:
             lStore_medium.append(list(software_ref))
@@ -69,13 +74,8 @@ def get_width_height(bookmarks):  # расчет наибольшей высот
 def resize_window():  # функция изменения размера окна, в зависимости от количества строк и максимальной ширины строки
     global count_width
     global count_height
-    # print(count_width)
-    # print(count_height)
-    # print(max(page))
-    # print(count_width)
     global inc
     Window.resize(count_width + 150, max(page) * 23 + 180)
-    # sWindow_now.set_resize_mode(Window)
     inc = 0
 
 
@@ -110,54 +110,44 @@ def rename_number_cell(data):  # функция сокрытия автоинк�
             lStore_perspective.set_value(treeiter, 0, list(sort_perspective.keys())[
                 i])  # устанавливает маску с порядковым номером на id
 
-    # for j in sort_now:
-    #         #     path = Gtk.TreePath(j)  # перебор строк с присвоением в path
-    #         #     treeiter = lStore_now.get_iter(path)  # получение iter, соответствующее path
-    #         #     lStore_now.set_value(treeiter, 0, j+1)
+
+def format_bookmark(bookmark):
+    return '\t'.join(
+        str(field) if field else ''
+        for field in bookmark
+    )
 
 
 class Option:  # подключение текста меню к командам бизнес-логики
-    def __init__(self, name, command, prep_call=None):
+    def __init__(self, name, command, prep_call=None, success_message='{result}'):
         self.name = name  # <1> имя, показываемое в меню
         self.command = command  # <2> экземпляр выполняемой программы
         self.prep_call = prep_call  # <3> необязательный подготовительный шаг, который вызывается перед выполнением
         # программы
+        self.success_message = success_message  # сообщение о выполнении программы
 
-    def _handle_message(self, message):  # функция проверки формата данных, если список то вызов print_bookmarks
-        if isinstance(message, list):
-            print_bookmarks(message)
+    def choose(self, name, note=None):  # <4> вызывается, когда вариант действия выбран из меню
+        if self.prep_call:
+            if self.name != 'Edit a bookmark':
+                note = entry.get_text()
+            data = self.prep_call()
         else:
-            entry_sabject.set_text(message)
-
-    def choose(self, name):  # <4> вызывается, когда вариант действия выбран из меню
-        data = self.prep_call() if self.prep_call else None  # <5> вызывает подготовительный шаг, если он указан
-        message = self.command.execute(
-            name, data) if data else self.command.execute(name)  # <6> выполняет команду, переданную в данных из
-        # подготовительного шага
-        self._handle_message(message)
-
-    def choose_update(self, name):  # <4> вызывается, когда вариант действия выбран из меню
-        note = entry.get_text()
-        data = self.prep_call() if self.prep_call else None  # <5> вызывает подготовительный шаг, если он указан
-        message = self.command.execute(
-            name, data, note) if data else self.command.execute(name)  # <6> выполняет команду, переданную в данных из
-        # подготовительного шага
-        self._handle_message(message)
-
-    def choose_update_note(self, name, note):  # <4> вызывается, когда вариант действия выбран из меню
-        data = self.prep_call() if self.prep_call else None  # <5> вызывает подготовительный шаг, если он указан
-        message = self.command.execute(
-            name, data, note) if data else self.command.execute(name)  # <6> выполняет команду, переданную в данных из
-        # подготовительного шага
-        self._handle_message(message)
-
-    def choose_first_add(self, name):
-        message = self.command.execute(name)
-        get_width_height(message)
-
-    # def __str__(self):  # <7> представляет вариант действия в формате имени вместо дефолтного поведения Python
-    #     return self.name
-
+            data = None  # <5> вызывает подготовительный шаг, если он указан
+        success, result = self.command.execute(name, data, note)  # <3>
+        formatted_result = ""
+        if isinstance(result, list):  # <4>
+            print_bookmarks(result)
+        else:
+            formatted_result = self.success_message
+            if formatted_result == 'Заметка удалена!':
+                entry_sabject.set_text(formatted_result)
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+            else:
+                entry_sabject.set_text(formatted_result)
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("green"))
+        if success:
+            # print(self.success_message.format(result=formatted_result))
+            entry_sabject.set_text(self.success_message.format(result=formatted_result))
 
 def on_tree_selection_changed(selection):  # функция показывает значение в выделенном пользователем столбце и строке
     model, treeiter = selection.get_selected()
@@ -268,10 +258,12 @@ class Handler:
                 if GetTextDimensions(entry.get_text(), 11, "Cantarell") > count_width:
                     count_width = GetTextDimensions(entry.get_text(), 11, "Cantarell")
 
-        Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call=get_new_bookmark_data).choose(
+        Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call=get_new_bookmark_data,
+               success_message='Заметка добавлена!').choose(
             get_table_name())
         clear_table()
-        Option('List bookmarks by date', commands.ListBookmarksCommand()).choose(get_table_name())
+        Option('List bookmarks by date', commands.ListBookmarksCommand(),
+               success_message='Заметка добавлена!').choose(get_table_name())
 
         rename_number_cell(get_table_name())
 
@@ -282,17 +274,15 @@ class Handler:
                 count_width = GetTextDimensions(entry.get_text(), 11, "Cantarell")
                 resize_window()
             else:
-                count_width = 0
-                Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add('bookmarks')
-                Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add('bookmarks_medium')
-                Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add(
-                    'bookmarks_perspective')
+                # get_width_height(get_table_name())
                 resize_window()
 
             Option('Update a bookmark', commands.UpdateBookmarkCommand(),
-                   prep_call=get_bookmark_id_for_deletion).choose_update(get_table_name())
+                   prep_call=get_bookmark_id_for_deletion, success_message='Заметка обновлена!').choose(
+                get_table_name())
             clear_table()
-            Option('List bookmarks by date', commands.ListBookmarksCommand()).choose(get_table_name())
+            Option('List bookmarks by date', commands.ListBookmarksCommand(),
+                   success_message='Заметка обновлена!').choose(get_table_name())
 
             rename_number_cell(get_table_name())
         else:
@@ -327,13 +317,56 @@ class Handler:
                     page[2] = page[2] - 1
 
             Option('Delete a bookmark', commands.DeleteBookmarkCommand(),
-                   prep_call=get_bookmark_id_for_deletion).choose(get_table_name())
+                   prep_call=get_bookmark_id_for_deletion, success_message='Заметка удалена!').choose(get_table_name())
             clear_table()
-            Option('List bookmarks by date', commands.ListBookmarksCommand()).choose(get_table_name())
-
+            Option('List bookmarks by date', commands.ListBookmarksCommand(),
+                   success_message='Заметка удалена!').choose(get_table_name())
             rename_number_cell(get_table_name())
         else:
             entry_sabject.set_text("Выделите заметку!")
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+
+    def main_window_key_press_event_cb(self, window, event):  # функция анализ нажатия кнопок в главном окне
+        keyname = Gdk.keyval_name(event.keyval)  # получаем наименование нажатой кнопки
+        if keyname == "Down":  # если нажата стрелка вниз
+            selection_now = tree_now.get_selection()  # получаем выделение
+            selection_medium = tree_medium.get_selection()  # получаем выделение
+            selection_perspective = tree_perspective.get_selection()  # получаем выделение
+            if notebook.get_current_page() == 0:  # проверяем какая страница выбрана
+                path = Gtk.TreePath(len(lStore_now) - 1)  # определяем path последней строки списка
+                treeiter = lStore_now.get_iter(path)  # определяем treeiter последней строки списка
+                if selection_now.iter_is_selected(treeiter) == True:  # определяем выделена ли последняя строка списка
+                    self.get_note_clicked_cb("Insert_new_note")  # добавляем новую строку
+                    # переводим курсор на добавленную строку
+                    last = lStore_now.iter_n_children()
+                    last = last - 1
+                    c = tree_now.get_column(0)
+                    tree_now.set_cursor(last, c, True)
+            elif notebook.get_current_page() == 1:  # проверяем какая страница выбрана
+                path = Gtk.TreePath(len(lStore_medium) - 1)  # определяем path последней строки списка
+                treeiter = lStore_medium.get_iter(path)  # определяем treeiter последней строки списка
+                if selection_medium.iter_is_selected(
+                        treeiter) == True:  # определяем выделена ли последняя строка списка
+                    self.get_note_clicked_cb("Insert_new_note")  # добавляем новую строку
+                    # переводим курсор на добавленную строку
+                    last = lStore_medium.iter_n_children()
+                    last = last - 1
+                    c = tree_medium.get_column(0)
+                    tree_medium.set_cursor(last, c, True)
+            elif notebook.get_current_page() == 2:  # проверяем какая страница выбрана
+                path = Gtk.TreePath(len(lStore_perspective) - 1)  # определяем path последней строки списка
+                treeiter = lStore_perspective.get_iter(path)  # определяем treeiter последней строки списка
+                if selection_perspective.iter_is_selected(
+                        treeiter) == True:  # определяем выделена ли последняя строка списка
+                    self.get_note_clicked_cb("Insert_new_note")  # добавляем новую строку
+                    # переводим курсор на добавленную строку
+                    last = lStore_perspective.iter_n_children()
+                    last = last - 1
+                    c = tree_perspective.get_column(0)
+                    tree_perspective.set_cursor(last, c, True)
+
+        if keyname == "Delete":
+            self.delete_note_clicked_cb("Delete_note")
 
 
 def text_edited(widget, path, text):  # функция записи во второй столбец таблицы редактируемого значения
@@ -350,17 +383,15 @@ def text_edited(widget, path, text):  # функция записи во вто�
         count_width = GetTextDimensions(text, 11, "Cantarell")
         resize_window()
     else:
-        count_width = 0
-        Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add('bookmarks')
-        Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add('bookmarks_medium')
-        Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add(
-            'bookmarks_perspective')
+        # get_width_height(get_table_name())
         resize_window()
-    Option('Update a bookmark', commands.UpdateBookmarkCommand(),
-           prep_call=get_bookmark_id_for_deletion).choose_update_note(get_table_name(), text)
+    Option('Edit a bookmark', commands.UpdateBookmarkCommand(),
+           prep_call=get_bookmark_id_for_deletion, success_message='Заметка обновлена!').choose(get_table_name(), text)
     clear_table()
-    Option('List bookmarks by date', commands.ListBookmarksCommand()).choose(get_table_name())
+    Option('List bookmarks by date', commands.ListBookmarksCommand(), success_message='Заметка обновлена!').choose(
+        get_table_name())
     rename_number_cell(get_table_name())
+
 
 abuilder = Gtk.Builder()
 abuilder.add_from_file("Interfeice.glade")
@@ -379,13 +410,6 @@ sWindow_now = abuilder.get_object("scrolled_window_now")  # окно прокр�
 sWindow_medium = abuilder.get_object("scrolled_window_medium")  # окно прокрутки первой вкладки
 sWindow_perspective = abuilder.get_object("scrolled_window_perspective")  # окно прокрутки первой вкладки
 
-# sWindow_now.set_hexpand(True)
-# sWindow_now.set_vexpand(True)
-# sWindow_medium.set_hexpand(True)
-# sWindow_medium.set_vexpand(True)
-# text_now = abuilder.get_object("text_now")
-# textbuffer = text_now.get_buffer()
-# textbuffer.set_text('123')
 lStore_now = abuilder.get_object("liststore_now")
 lStore_medium = abuilder.get_object("liststore_medium")
 lStore_perspective = abuilder.get_object("liststore_perspective")
@@ -394,10 +418,7 @@ lStore_perspective = abuilder.get_object("liststore_perspective")
 tree_now = abuilder.get_object("tree_view_now")
 tree_medium = abuilder.get_object("tree_view_medium")
 tree_perspective = abuilder.get_object("tree_view_perspective")
-# tree_now.set_hexpand(True)
-# tree_now.set_vexpand(True)
-# tree_medium.set_hexpand(True)
-# tree_medium.set_vexpand(True)
+
 for i, column_title in enumerate(  # загрузка в дерево столбцов и присвоение им наименований
         ["№", "Список срочных дел", "Дата"]
 ):
@@ -428,36 +449,29 @@ for i, column_title in enumerate(  # загрузка в дерево столб
         renderer.set_property("editable", True)  # делает редактируемым строки столбца 1
         renderer.connect("edited", text_edited)  # запоминает введенное значение в строку
 
-# select = tree_now.get_selection()  # выбор таблицы
-# select.connect("changed", on_tree_selection_changed)  # подключение сигнала выбранной строки
-
-
-# sWindow_now.add(tree_now)
-
+Window.set_title("ToDoIt")
+Window.set_icon_from_file("icon.ico")
 Window.show_all()
-# whatis(Window)
-if __name__ == '__main__':
-    commands.CreateBookmarksTableCommand().execute('bookmarks')  # инициализация БД
-    # получение данных их таблиц для изменения размеров окна под содержимое
-    Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add('bookmarks')
-    Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add('bookmarks_medium')
-    Option('List bookmarks by date', commands.ListBookmarksCommand()).choose_first_add('bookmarks_perspective')
-    resize_window()  # функция изменения размеров окна под содержимое таблиц
+whatis(Gtk.ToolButton)
 
-    Option('List bookmarks by date', commands.ListBookmarksCommand()).choose(
+if __name__ == '__main__':
+    Option('List bookmarks by date', commands.ListBookmarksCommand(),
+           success_message='Таблицы загружены!').choose(
         'bookmarks')  # загрузка таблицы bookmarks в 1-ю вкладку
     notebook.next_page()  # переход на вторую вкладку
-    Option('List bookmarks by date', commands.ListBookmarksCommand()).choose(
+    Option('List bookmarks by date', commands.ListBookmarksCommand(),
+           success_message='Таблицы загружены!').choose(
         'bookmarks_medium')  # загрузка таблицы bookmarks_medium во 2-ю вкладку
     notebook.next_page()  # переход на третью вкладку
-    Option('List bookmarks by date', commands.ListBookmarksCommand()).choose(
+    Option('List bookmarks by date', commands.ListBookmarksCommand(),
+           success_message='Таблицы загружены!').choose(
         'bookmarks_perspective')  # загрузка таблицы bookmarks_perspective в 3-ю вкладку
     notebook.set_current_page(0)  # возвращение на первую вкладку
-
     rename_number_cell('bookmarks')  # переименование строк в столбце для скрытия id
     rename_number_cell('bookmarks_medium')  # переименование строк в столбце для скрытия id
     rename_number_cell('bookmarks_perspective')  # переименование строк в столбце для скрытия id
-
-    entry_sabject.set_text("Таблицы загружены")  # вывод надписи в нижнее поле
-
+    get_width_height("bookmarks")
+    get_width_height("bookmarks_medium")
+    get_width_height("bookmarks_perspective")  # функция изменения размеров окна под содержимое таблиц
+    # print(lStore_now_save)
     Gtk.main()
