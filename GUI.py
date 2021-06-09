@@ -1,4 +1,6 @@
 #!C:/msys64/mingw64/bin/python.exe
+from datetime import datetime
+
 import gi
 import ctypes
 import commands
@@ -26,15 +28,76 @@ def GetTextDimensions(text, points, font):  # считает ширину тек
 
     return size.cx  # возвращает ширину строки size.cx и высоту строки size.cy [size.cx, size.cy]
 
+count_sensetive = 0
+count_change = -1
+count_cancel_index = 0
+cancel_index = False
+l_index = 1
+lStore_now_save1 = []
+lStore_now_save2 = []
+lStore_now_save3 = []
 
-# lStore_now_save = []
+
+def sort_lstore():
+    ls = []
+    if lStore_now_save1:
+        ls.append(lStore_now_save1[0])
+    if lStore_now_save2:
+        ls.append(lStore_now_save2[0])
+    if lStore_now_save3:
+        ls.append(lStore_now_save3[0])
+    ls_sort = sorted(ls)
+    len_ls = len(ls_sort)
+
+    if ls_sort[len_ls-count_cancel_index-1] == lStore_now_save1[0]:
+        if len_ls - count_cancel_index - 1 == 0:
+            btn_cancellation.set_sensitive(False)
+        return lStore_now_save1
+    if ls_sort[len_ls-count_cancel_index-1] == lStore_now_save2[0]:
+        if len_ls - count_cancel_index - 1 == 0:
+            btn_cancellation.set_sensitive(False)
+        return lStore_now_save2
+    if ls_sort[len_ls-count_cancel_index-1] == lStore_now_save3[0]:
+        if len_ls - count_cancel_index - 1 == 0:
+            btn_cancellation.set_sensitive(False)
+        return lStore_now_save3
+
+
+def save_lstore():
+    global l_index
+    if l_index == 4:
+        btn_cancellation.set_sensitive(True)
+        l_index = 1
+    if l_index == 1:
+        lStore_now_save1.clear()
+        lStore_now_save1.append(datetime.now().strftime("%H%M%S"))
+        return lStore_now_save1
+    if l_index == 2:
+        btn_cancellation.set_sensitive(True)
+        lStore_now_save2.clear()
+        lStore_now_save2.append(datetime.now().strftime("%H%M%S"))
+        return lStore_now_save2
+    if l_index == 3:
+        btn_cancellation.set_sensitive(True)
+        lStore_now_save3.clear()
+        lStore_now_save3.append(datetime.now().strftime("%H%M%S"))
+        return lStore_now_save3
 
 
 def print_bookmarks(bookmarks):  # вывод таблицы в закладку
+    global l_index, count_cancel_index, count_change
     if notebook.get_current_page() == 0:  # загрузка в таблицы в закладку срочных дел
+        if cancel_index == False:
+            lStore = save_lstore()
+            count_cancel_index = 0
+            count_change += 1
         for software_ref in bookmarks:
             lStore_now.append(list(software_ref))
-            # lStore_now_save.append(list(software_ref))
+            if cancel_index == False:
+                lStore.append(list(software_ref))
+        # print(l_index)
+        if cancel_index == False:
+            l_index += 1
     if notebook.get_current_page() == 1:  # загрузка в таблицы в закладку среднесрочных дел
         for software_ref in bookmarks:
             lStore_medium.append(list(software_ref))
@@ -127,9 +190,9 @@ class Option:  # подключение текста меню к команда�
         self.success_message = success_message  # сообщение о выполнении программы
 
     def choose(self, name, note=None):  # <4> вызывается, когда вариант действия выбран из меню
-        if self.prep_call:
-            if self.name != 'Edit a bookmark':
-                note = entry.get_text()
+        if isinstance(self.prep_call, dict):
+            data = self.prep_call
+        elif self.prep_call:
             data = self.prep_call()
         else:
             data = None  # <5> вызывает подготовительный шаг, если он указан
@@ -149,6 +212,7 @@ class Option:  # подключение текста меню к команда�
             # print(self.success_message.format(result=formatted_result))
             entry_sabject.set_text(self.success_message.format(result=formatted_result))
 
+
 def on_tree_selection_changed(selection):  # функция показывает значение в выделенном пользователем столбце и строке
     model, treeiter = selection.get_selected()
     if treeiter is not None:
@@ -156,7 +220,16 @@ def on_tree_selection_changed(selection):  # функция показывает
 
 
 def get_user_input(label):  # <1> общая функция, которая предлагает пользователя ввести данные
-    return entry.get_text()
+    return ""
+
+
+def get_new_table():  # <4> функция, которая получает необходимые данные для добавления новой закладки
+    return {
+        'title': "get_user_input('Title')",
+        # 'url': 'Address',
+        # 'notes': 'note1',  # <5> примечания для закладки не являются обязательными,
+        # # поэтому не продолжает предлагать их ввести
+    }
 
 
 def get_new_bookmark_data():  # <4> функция, которая получает необходимые данные для добавления новой закладки
@@ -226,37 +299,25 @@ class Handler:
         if notebook.get_current_page() == 0 and page[0] == max(
                 page):  # добавление заметки в таблицу срочных дел bookmarks
             count_height = count_height + 1
-            if GetTextDimensions(entry.get_text(), 11, "Cantarell") > count_width:
-                count_width = GetTextDimensions(entry.get_text(), 11, "Cantarell")
             page[0] = page[0] + 1
             resize_window()
         elif notebook.get_current_page() == 1 and page[1] == max(
                 page):  # добавление заметки в таблицу среднесрочных дел bookmarks_medium
             count_height = count_height + 1
-            if GetTextDimensions(entry.get_text(), 11, "Cantarell") > count_width:
-                count_width = GetTextDimensions(entry.get_text(), 11, "Cantarell")
             page[1] = page[1] + 1
             resize_window()
         elif notebook.get_current_page() == 2 and page[2] == max(
                 page):  # добавление заметки в таблицу среднесрочных дел bookmarks_perspective
             count_height = count_height + 1
-            if GetTextDimensions(entry.get_text(), 11, "Cantarell") > count_width:
-                count_width = GetTextDimensions(entry.get_text(), 11, "Cantarell")
             page[2] = page[2] + 1
             resize_window()
         else:
             if notebook.get_current_page() == 0:  # добавление заметки в таблицу срочных дел bookmarks
                 page[0] = page[0] + 1
-                if GetTextDimensions(entry.get_text(), 11, "Cantarell") > count_width:
-                    count_width = GetTextDimensions(entry.get_text(), 11, "Cantarell")
             elif notebook.get_current_page() == 1:  # добавление заметки в таблицу среднесрочных дел bookmarks_medium
                 page[1] = page[1] + 1
-                if GetTextDimensions(entry.get_text(), 11, "Cantarell") > count_width:
-                    count_width = GetTextDimensions(entry.get_text(), 11, "Cantarell")
             elif notebook.get_current_page() == 2:  # добавление заметки в таблицу среднесрочных дел bookmarks_perspective
                 page[2] = page[2] + 1
-                if GetTextDimensions(entry.get_text(), 11, "Cantarell") > count_width:
-                    count_width = GetTextDimensions(entry.get_text(), 11, "Cantarell")
 
         Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call=get_new_bookmark_data,
                success_message='Заметка добавлена!').choose(
@@ -270,12 +331,7 @@ class Handler:
     def change_note_clicked_cb(self, button):  # обрабатывает нажатие кнопки "Изменить запись"
         global count_width
         if int(get_bookmark_id_for_deletion()) > 0:
-            if GetTextDimensions(entry.get_text(), 11, "Cantarell") > count_width:
-                count_width = GetTextDimensions(entry.get_text(), 11, "Cantarell")
-                resize_window()
-            else:
-                # get_width_height(get_table_name())
-                resize_window()
+            resize_window()
 
             Option('Update a bookmark', commands.UpdateBookmarkCommand(),
                    prep_call=get_bookmark_id_for_deletion, success_message='Заметка обновлена!').choose(
@@ -368,17 +424,84 @@ class Handler:
         if keyname == "Delete":
             self.delete_note_clicked_cb("Delete_note")
 
+    def btn_return_clicked_cb(self, button):
+        Option('Delete table', commands.DropBookmarkCommand(),
+               success_message='Таблица удалена!').choose(
+            'bookmarks')  # удаление таблицы
+        Option('Create table', commands.CreateTableBookmarkCommand(),
+               success_message='Таблица создана!').choose(
+            'bookmarks')  # создание новой таблицы
+        ls = []
+        if lStore_now_save1:
+            ls.append(lStore_now_save1[0])
+        if lStore_now_save2:
+            ls.append(lStore_now_save2[0])
+        if lStore_now_save3:
+            ls.append(lStore_now_save3[0])
+        ls_sort = sorted(ls)
+        len_ls = len(ls_sort)
+        if ls_sort[len_ls - count_cancel_index - 1] == lStore_now_save1[0]:
+            if len_ls - count_cancel_index - 1 == 0:
+                btn_cancellation.set_sensitive(False)
+            last_ls = lStore_now_save1
+        if ls_sort[len_ls - count_cancel_index - 1] == lStore_now_save2[0]:
+            if len_ls - count_cancel_index - 1 == 0:
+                btn_cancellation.set_sensitive(False)
+            last_ls = lStore_now_save2
+        if ls_sort[len_ls - count_cancel_index - 1] == lStore_now_save3[0]:
+            if len_ls - count_cancel_index - 1 == 0:
+                btn_cancellation.set_sensitive(False)
+            last_ls = lStore_now_save3
+        for note in range(1, len(last_ls)):
+            Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call={
+                'title': last_ls[note][1], },
+                   success_message='Отмена редактирования!').choose(
+                get_table_name())
+        clear_table()
+        Option('List bookmarks by date', commands.ListBookmarksCommand(),
+               success_message='Таблицы загружены!').choose(
+            'bookmarks')
+
+
+    def btn_cancellation_clicked_cb(self, button):
+        global cancel_index, count_cancel_index, count_change, count_sensetive
+        cancel_index = True
+        count_cancel_index = count_cancel_index + 1
+        btn_return.set_sensitive(True)
+        count_sensetive += 1
+        Option('Delete table', commands.DropBookmarkCommand(),
+               success_message='Таблица удалена!').choose(
+            'bookmarks')  # удаление таблицы
+        Option('Create table', commands.CreateTableBookmarkCommand(),
+               success_message='Таблица создана!').choose(
+            'bookmarks')  # создание новой таблицы
+        last_ls = sort_lstore()
+        for note in range(1, len(last_ls)):
+            Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call={
+                'title': last_ls[note][1], },
+                   success_message='Отмена редактирования!').choose(
+                get_table_name())
+
+        clear_table()
+        Option('List bookmarks by date', commands.ListBookmarksCommand(),
+               success_message='Таблицы загружены!').choose(
+            'bookmarks')
+        print(count_change)
+        if count_change == 1:
+            btn_cancellation.set_sensitive(False)
+        count_change = 0
+        cancel_index = False
+
 
 def text_edited(widget, path, text):  # функция записи во второй столбец таблицы редактируемого значения
-    global count_width
-
+    global count_width, count_change
+    count_change -= 1
     if notebook.get_current_page() == 0:  # добавление заметки в таблицу срочных дел bookmarks
         lStore_now[path][1] = text
     elif notebook.get_current_page() == 1:  # добавление заметки в таблицу среднесрочных дел bookmarks_medium
         lStore_medium[path][1] = text
     elif notebook.get_current_page() == 2:  # добавление заметки в таблицу среднесрочных дел bookmarks_perspective
         lStore_perspective[path][1] = text
-
     if GetTextDimensions(text, 11, "Cantarell") > count_width:
         count_width = GetTextDimensions(text, 11, "Cantarell")
         resize_window()
@@ -400,15 +523,17 @@ abuilder.connect_signals(Handler())
 Window = abuilder.get_object("main_window")
 Window.connect("destroy", Gtk.main_quit)
 Window.set_resizable(True)
-Window.set_default_size(300, 600)
+Window.set_default_size(450, 600)
 
-entry = abuilder.get_object("entry_insert")
 entry_sabject = abuilder.get_object("entry_sabj")
 
 notebook = abuilder.get_object("note_book")
 sWindow_now = abuilder.get_object("scrolled_window_now")  # окно прокрутки первой вкладки
 sWindow_medium = abuilder.get_object("scrolled_window_medium")  # окно прокрутки первой вкладки
 sWindow_perspective = abuilder.get_object("scrolled_window_perspective")  # окно прокрутки первой вкладки
+
+btn_cancellation = abuilder.get_object("btn_cancellation")
+btn_return = abuilder.get_object("btn_return")
 
 lStore_now = abuilder.get_object("liststore_now")
 lStore_medium = abuilder.get_object("liststore_medium")
@@ -452,7 +577,7 @@ for i, column_title in enumerate(  # загрузка в дерево столб
 Window.set_title("ToDoIt")
 Window.set_icon_from_file("icon.ico")
 Window.show_all()
-whatis(Gtk.ToolButton)
+# whatis(btn_cancellation.set_sensitive(False))
 
 if __name__ == '__main__':
     Option('List bookmarks by date', commands.ListBookmarksCommand(),
@@ -474,4 +599,6 @@ if __name__ == '__main__':
     get_width_height("bookmarks_medium")
     get_width_height("bookmarks_perspective")  # функция изменения размеров окна под содержимое таблиц
     # print(lStore_now_save)
+    btn_cancellation.set_sensitive(False)  # делает кнопку не активной
+    btn_return.set_sensitive(False)  # делает кнопку не активной
     Gtk.main()
