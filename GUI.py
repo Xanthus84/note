@@ -9,7 +9,7 @@ import keyboard
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
-whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
+# whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
 
 
 def GetTextDimensions(text, points, font):  # считает ширину текста в пикселах
@@ -28,76 +28,24 @@ def GetTextDimensions(text, points, font):  # считает ширину тек
 
     return size.cx  # возвращает ширину строки size.cx и высоту строки size.cy [size.cx, size.cy]
 
-count_sensetive = 0
-count_change = -1
-count_cancel_index = 0
-cancel_index = False
-l_index = 1
-lStore_now_save1 = []
-lStore_now_save2 = []
-lStore_now_save3 = []
+number = 0  # переменная для подсчета заметок с начала сессии
+cancel_index = False  # для отмены сохранения списка глобальных переменных при нажатии кнопок отмена и возврат
 
 
-def sort_lstore():
-    ls = []
-    if lStore_now_save1:
-        ls.append(lStore_now_save1[0])
-    if lStore_now_save2:
-        ls.append(lStore_now_save2[0])
-    if lStore_now_save3:
-        ls.append(lStore_now_save3[0])
-    ls_sort = sorted(ls)
-    len_ls = len(ls_sort)
-
-    if ls_sort[len_ls-count_cancel_index-1] == lStore_now_save1[0]:
-        if len_ls - count_cancel_index - 1 == 0:
-            btn_cancellation.set_sensitive(False)
-        return lStore_now_save1
-    if ls_sort[len_ls-count_cancel_index-1] == lStore_now_save2[0]:
-        if len_ls - count_cancel_index - 1 == 0:
-            btn_cancellation.set_sensitive(False)
-        return lStore_now_save2
-    if ls_sort[len_ls-count_cancel_index-1] == lStore_now_save3[0]:
-        if len_ls - count_cancel_index - 1 == 0:
-            btn_cancellation.set_sensitive(False)
-        return lStore_now_save3
-
-
-def save_lstore():
-    global l_index
-    if l_index == 4:
-        btn_cancellation.set_sensitive(True)
-        l_index = 1
-    if l_index == 1:
-        lStore_now_save1.clear()
-        lStore_now_save1.append(datetime.now().strftime("%H%M%S"))
-        return lStore_now_save1
-    if l_index == 2:
-        btn_cancellation.set_sensitive(True)
-        lStore_now_save2.clear()
-        lStore_now_save2.append(datetime.now().strftime("%H%M%S"))
-        return lStore_now_save2
-    if l_index == 3:
-        btn_cancellation.set_sensitive(True)
-        lStore_now_save3.clear()
-        lStore_now_save3.append(datetime.now().strftime("%H%M%S"))
-        return lStore_now_save3
-
+def memory_note(number):  # создает глобальный список с указанным номером
+    globals()["lStore_now_save{}".format(number)] = [datetime.now().strftime("%H%M%S")]
+    return globals()["lStore_now_save{}".format(number)]
 
 def print_bookmarks(bookmarks):  # вывод таблицы в закладку
-    global l_index, count_cancel_index, count_change
+    global l_index, count_cancel_index, count_change, number
     if notebook.get_current_page() == 0:  # загрузка в таблицы в закладку срочных дел
         if cancel_index == False:
-            lStore = save_lstore()
-            count_cancel_index = 0
-            count_change += 1
+            lStore = memory_note(number)
+        number += 1
         for software_ref in bookmarks:
             lStore_now.append(list(software_ref))
             if cancel_index == False:
                 lStore.append(list(software_ref))
-        # print(l_index)
-        if cancel_index == False:
-            l_index += 1
     if notebook.get_current_page() == 1:  # загрузка в таблицы в закладку среднесрочных дел
         for software_ref in bookmarks:
             lStore_medium.append(list(software_ref))
@@ -296,6 +244,8 @@ class Handler:
         global count_width
         global count_height
         global page
+        btn_cancellation.set_sensitive(True)
+        btn_return.set_sensitive(False)
         if notebook.get_current_page() == 0 and page[0] == max(
                 page):  # добавление заметки в таблицу срочных дел bookmarks
             count_height = count_height + 1
@@ -348,6 +298,8 @@ class Handler:
         global count_width
         global count_height
         global page
+        btn_cancellation.set_sensitive(True)
+        btn_return.set_sensitive(False)
         if int(get_bookmark_id_for_deletion()) > 0:
             if notebook.get_current_page() == 0 and page[0] == max(
                     page):  # добавление заметки в таблицу срочных дел bookmarks
@@ -416,6 +368,8 @@ class Handler:
                         treeiter) == True:  # определяем выделена ли последняя строка списка
                     self.get_note_clicked_cb("Insert_new_note")  # добавляем новую строку
                     # переводим курсор на добавленную строку
+                    btn_cancellation.set_sensitive(True)
+                    btn_return.set_sensitive(False)
                     last = lStore_perspective.iter_n_children()
                     last = last - 1
                     c = tree_perspective.get_column(0)
@@ -425,77 +379,67 @@ class Handler:
             self.delete_note_clicked_cb("Delete_note")
 
     def btn_return_clicked_cb(self, button):
-        Option('Delete table', commands.DropBookmarkCommand(),
-               success_message='Таблица удалена!').choose(
-            'bookmarks')  # удаление таблицы
-        Option('Create table', commands.CreateTableBookmarkCommand(),
-               success_message='Таблица создана!').choose(
-            'bookmarks')  # создание новой таблицы
-        ls = []
-        if lStore_now_save1:
-            ls.append(lStore_now_save1[0])
-        if lStore_now_save2:
-            ls.append(lStore_now_save2[0])
-        if lStore_now_save3:
-            ls.append(lStore_now_save3[0])
-        ls_sort = sorted(ls)
-        len_ls = len(ls_sort)
-        if ls_sort[len_ls - count_cancel_index - 1] == lStore_now_save1[0]:
-            if len_ls - count_cancel_index - 1 == 0:
-                btn_cancellation.set_sensitive(False)
-            last_ls = lStore_now_save1
-        if ls_sort[len_ls - count_cancel_index - 1] == lStore_now_save2[0]:
-            if len_ls - count_cancel_index - 1 == 0:
-                btn_cancellation.set_sensitive(False)
-            last_ls = lStore_now_save2
-        if ls_sort[len_ls - count_cancel_index - 1] == lStore_now_save3[0]:
-            if len_ls - count_cancel_index - 1 == 0:
-                btn_cancellation.set_sensitive(False)
-            last_ls = lStore_now_save3
-        for note in range(1, len(last_ls)):
-            Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call={
-                'title': last_ls[note][1], },
-                   success_message='Отмена редактирования!').choose(
-                get_table_name())
-        clear_table()
-        Option('List bookmarks by date', commands.ListBookmarksCommand(),
-               success_message='Таблицы загружены!').choose(
-            'bookmarks')
-
-
-    def btn_cancellation_clicked_cb(self, button):
-        global cancel_index, count_cancel_index, count_change, count_sensetive
+        global number, cancel_index
         cancel_index = True
-        count_cancel_index = count_cancel_index + 1
-        btn_return.set_sensitive(True)
-        count_sensetive += 1
+        try:
+            last_ls = globals()["lStore_now_save{}".format(number)]
+        except KeyError:
+            btn_return.set_sensitive(False)
+            return
         Option('Delete table', commands.DropBookmarkCommand(),
                success_message='Таблица удалена!').choose(
             'bookmarks')  # удаление таблицы
         Option('Create table', commands.CreateTableBookmarkCommand(),
                success_message='Таблица создана!').choose(
             'bookmarks')  # создание новой таблицы
-        last_ls = sort_lstore()
+        print(last_ls)
+        print(number)
         for note in range(1, len(last_ls)):
             Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call={
                 'title': last_ls[note][1], },
                    success_message='Отмена редактирования!').choose(
                 get_table_name())
-
         clear_table()
+        # number += 1
         Option('List bookmarks by date', commands.ListBookmarksCommand(),
                success_message='Таблицы загружены!').choose(
             'bookmarks')
-        print(count_change)
-        if count_change == 1:
-            btn_cancellation.set_sensitive(False)
-        count_change = 0
         cancel_index = False
+
+
+    def btn_cancellation_clicked_cb(self, button):  # отмена последнего изменения
+        global number, cancel_index
+        cancel_index = True  # отмена присвоения изменений глобальному списку
+        if number == 1:   # если дошли до начала списка сделать кнопку отмены не активной
+            btn_cancellation.set_sensitive(False)
+            return
+        Option('Delete table', commands.DropBookmarkCommand(),
+               success_message='Таблица удалена!').choose(
+            'bookmarks')  # удаление таблицы
+        Option('Create table', commands.CreateTableBookmarkCommand(),
+               success_message='Таблица создана!').choose(
+            'bookmarks')  # создание новой таблицы
+        last_ls = globals()["lStore_now_save{}".format(number-2)]  # получаем глобальный список с предыдущими значениями
+        # print(last_ls)
+        # print(number)
+        for note in range(1, len(last_ls)):  # переносим значения таблицы из глобального списка новую таблицу
+            Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call={
+                'title': last_ls[note][1], },
+                   success_message='Отмена редактирования!').choose(
+                get_table_name())
+        clear_table()  # сочищаем таблицу
+        number -= 1
+        Option('List bookmarks by date', commands.ListBookmarksCommand(),
+               success_message='Таблицы загружены!').choose(
+            'bookmarks')  # выводим на экран таблицу
+        number -= 1
+        cancel_index = False
+        btn_return.set_sensitive(True)
 
 
 def text_edited(widget, path, text):  # функция записи во второй столбец таблицы редактируемого значения
     global count_width, count_change
-    count_change -= 1
+    btn_cancellation.set_sensitive(True)
     if notebook.get_current_page() == 0:  # добавление заметки в таблицу срочных дел bookmarks
         lStore_now[path][1] = text
     elif notebook.get_current_page() == 1:  # добавление заметки в таблицу среднесрочных дел bookmarks_medium
@@ -577,6 +521,7 @@ for i, column_title in enumerate(  # загрузка в дерево столб
 Window.set_title("ToDoIt")
 Window.set_icon_from_file("icon.ico")
 Window.show_all()
+
 # whatis(btn_cancellation.set_sensitive(False))
 
 if __name__ == '__main__':
@@ -598,7 +543,7 @@ if __name__ == '__main__':
     get_width_height("bookmarks")
     get_width_height("bookmarks_medium")
     get_width_height("bookmarks_perspective")  # функция изменения размеров окна под содержимое таблиц
-    # print(lStore_now_save)
     btn_cancellation.set_sensitive(False)  # делает кнопку не активной
     btn_return.set_sensitive(False)  # делает кнопку не активной
+
     Gtk.main()
