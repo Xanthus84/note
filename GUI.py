@@ -9,6 +9,7 @@ import keyboard
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
+
 # whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
 
 
@@ -28,30 +29,58 @@ def GetTextDimensions(text, points, font):  # считает ширину тек
 
     return size.cx  # возвращает ширину строки size.cx и высоту строки size.cy [size.cx, size.cy]
 
+
 number = 0  # переменная для подсчета заметок с начала сессии
 cancel_index = False  # для отмены сохранения списка глобальных переменных при нажатии кнопок отмена и возврат
+lstore_current = []
 
 
-def memory_note(number):  # создает глобальный список с указанным номером
-    globals()["lStore_now_save{}".format(number)] = [datetime.now().strftime("%H%M%S")]
+def memory_note(number, name):  # создает глобальный список с указанным номером
+    globals()["lStore_now_save{}".format(number)] = [name]  # присвоение 0-му элементу имени измененной таблицы
     return globals()["lStore_now_save{}".format(number)]
 
-def print_bookmarks(bookmarks):  # вывод таблицы в закладку
-    global l_index, count_cancel_index, count_change, number
-    if notebook.get_current_page() == 0:  # загрузка в таблицы в закладку срочных дел
-        if cancel_index == False:
-            lStore = memory_note(number)
+
+def get_last_save_name():  # функция возвращает название предыдущей таблицы, в которой были изменения и номер таблицы
+    try:
+        name_now = globals()["lStore_now_save{}".format(number - 1)][0]  # получаем имя текущей таблицы
+        for i_n in reversed(range(number)):
+            name_last = globals()["lStore_now_save{}".format(i_n - 2)][0]  # получаем имя предыдущей таблицы
+            if name_last == name_now:  # сравниваем имена текущей таблицы и первой из предыдущих с таким же именем
+                return name_last, i_n - 2  # возвращаем имя предыдущей таблицы и ее номер
+    except KeyError:  # компенсация исключения по вычитанию номера при нажатии кнопки возврат
+        name_now = globals()["lStore_now_save{}".format(number - 2)][0]
+        for i_n in reversed(range(number)):
+            name_last = globals()["lStore_now_save{}".format(i_n - 3)][0]
+            if name_last == name_now:
+                return name_last, i_n - 3
+
+
+def print_bookmarks(bookmarks, name):  # вывод таблицы в закладку
+    global number
+    if not cancel_index:
+        lStore = memory_note(number, name)
+    # if notebook.get_current_page() == 0:  # загрузка в таблицы в закладку срочных дел
+    if name == 'bookmarks':  # загрузка в таблицы в закладку срочных дел
         number += 1
         for software_ref in bookmarks:
             lStore_now.append(list(software_ref))
-            if cancel_index == False:
+            if not cancel_index:
                 lStore.append(list(software_ref))
-    if notebook.get_current_page() == 1:  # загрузка в таблицы в закладку среднесрочных дел
+    # if notebook.get_current_page() == 1:  # загрузка в таблицы в закладку среднесрочных дел
+    if name == 'bookmarks_medium':  # загрузка в таблицы в закладку среднесрочных дел
+        number += 1
         for software_ref in bookmarks:
             lStore_medium.append(list(software_ref))
-    if notebook.get_current_page() == 2:  # загрузка в таблицы в закладку среднесрочных дел
+            if not cancel_index:
+                lStore.append(list(software_ref))
+    # if notebook.get_current_page() == 2:  # загрузка в таблицы в закладку среднесрочных дел
+    if name == 'bookmarks_perspective':  # загрузка в таблицы в закладку среднесрочных дел
+        number += 1
         for software_ref in bookmarks:
             lStore_perspective.append(list(software_ref))
+            if not cancel_index:
+                lStore.append(list(software_ref))
+    # print(number)
 
 
 count_width = 0  # глобальная переменная максимальной ширины строки
@@ -147,7 +176,7 @@ class Option:  # подключение текста меню к команда�
         success, result = self.command.execute(name, data, note)  # <3>
         formatted_result = ""
         if isinstance(result, list):  # <4>
-            print_bookmarks(result)
+            print_bookmarks(result, name)
         else:
             formatted_result = self.success_message
             if formatted_result == 'Заметка удалена!':
@@ -217,12 +246,12 @@ def get_bookmark_id_for_deletion():  # <6> получает необходиму
         return 0
 
 
-def clear_table():  # функция очистки таблицы
-    if notebook.get_current_page() == 0:  # если выбрана таблица срочных дел bookmarks
+def clear_table(name):  # функция очистки таблицы
+    if name == 'bookmarks':  # если выбрана таблица срочных дел bookmarks
         lStore_now.clear()
-    if notebook.get_current_page() == 1:  # если выбрана таблица среднесрочных дел bookmarks_medium
+    if name == 'bookmarks_medium':  # если выбрана таблица среднесрочных дел bookmarks_medium
         lStore_medium.clear()
-    if notebook.get_current_page() == 2:  # если выбрана таблица перспективных дел bookmarks_perspective
+    if name == 'bookmarks_perspective':  # если выбрана таблица перспективных дел bookmarks_perspective
         lStore_perspective.clear()
 
 
@@ -272,7 +301,7 @@ class Handler:
         Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call=get_new_bookmark_data,
                success_message='Заметка добавлена!').choose(
             get_table_name())
-        clear_table()
+        clear_table(get_table_name())
         Option('List bookmarks by date', commands.ListBookmarksCommand(),
                success_message='Заметка добавлена!').choose(get_table_name())
 
@@ -286,7 +315,7 @@ class Handler:
             Option('Update a bookmark', commands.UpdateBookmarkCommand(),
                    prep_call=get_bookmark_id_for_deletion, success_message='Заметка обновлена!').choose(
                 get_table_name())
-            clear_table()
+            clear_table(get_table_name())
             Option('List bookmarks by date', commands.ListBookmarksCommand(),
                    success_message='Заметка обновлена!').choose(get_table_name())
 
@@ -326,7 +355,7 @@ class Handler:
 
             Option('Delete a bookmark', commands.DeleteBookmarkCommand(),
                    prep_call=get_bookmark_id_for_deletion, success_message='Заметка удалена!').choose(get_table_name())
-            clear_table()
+            clear_table(get_table_name())
             Option('List bookmarks by date', commands.ListBookmarksCommand(),
                    success_message='Заметка удалена!').choose(get_table_name())
             rename_number_cell(get_table_name())
@@ -378,63 +407,83 @@ class Handler:
         if keyname == "Delete":
             self.delete_note_clicked_cb("Delete_note")
 
-    def btn_return_clicked_cb(self, button):
+    def btn_return_clicked_cb(self, button):  # возвращает отмененное значение
         global number, cancel_index
-        cancel_index = True
-        try:
+        cancel_index = True  # позволяет не индексировать и не запоминать записи, т.к. возврат осуществляется по существующим записям
+        try:  # проверка существования сохраненной таблицы
             last_ls = globals()["lStore_now_save{}".format(number)]
-        except KeyError:
+            name_table = globals()["lStore_now_save{}".format(number)][0]
+        except KeyError:  # если номер таблицы выходит за диапазон, кнопка становится не активной
             btn_return.set_sensitive(False)
             return
         Option('Delete table', commands.DropBookmarkCommand(),
                success_message='Таблица удалена!').choose(
-            'bookmarks')  # удаление таблицы
+            name_table)  # удаление таблицы
         Option('Create table', commands.CreateTableBookmarkCommand(),
                success_message='Таблица создана!').choose(
-            'bookmarks')  # создание новой таблицы
-        print(last_ls)
-        print(number)
-        for note in range(1, len(last_ls)):
+            name_table)  # создание новой таблицы
+        for note in range(1, len(last_ls)):  # загрузка в таблицу отмененных ранее данных
             Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call={
                 'title': last_ls[note][1], },
                    success_message='Отмена редактирования!').choose(
-                get_table_name())
-        clear_table()
+                name_table)
+        clear_table(name_table)  # очищение изменяемой таблицы
+        # переключение на вкладку, в которой изменяется таблица
+        if name_table == 'bookmarks':  # если выбрана таблица срочных дел bookmarks
+            notebook.set_current_page(0)
+        elif name_table == 'bookmarks_medium':  # если выбрана таблица среднесрочных дел bookmarks_medium
+            notebook.set_current_page(1)
+        elif name_table == 'bookmarks_perspective':  # если выбрана таблица перспективных дел bookmarks_perspective
+            notebook.set_current_page(2)
         # number += 1
         Option('List bookmarks by date', commands.ListBookmarksCommand(),
                success_message='Таблицы загружены!').choose(
-            'bookmarks')
+            name_table)
         cancel_index = False
 
-
     def btn_cancellation_clicked_cb(self, button):  # отмена последнего изменения
-        global number, cancel_index
+        global number, cancel_index, lstore_current
         cancel_index = True  # отмена присвоения изменений глобальному списку
-        if number == 1:   # если дошли до начала списка сделать кнопку отмены не активной
+        if number == 3:  # если дошли до начала списка сделать кнопку отмены не активной
             btn_cancellation.set_sensitive(False)
             return
+        name_table = get_last_save_name()[0]  # получаем имя предыдущей таблицы с данными
+        number_table = get_last_save_name()[1]  # получаем номер предыдущей таблицы
         Option('Delete table', commands.DropBookmarkCommand(),
                success_message='Таблица удалена!').choose(
-            'bookmarks')  # удаление таблицы
+            name_table)  # удаление таблицы
         Option('Create table', commands.CreateTableBookmarkCommand(),
                success_message='Таблица создана!').choose(
-            'bookmarks')  # создание новой таблицы
-        last_ls = globals()["lStore_now_save{}".format(number-2)]  # получаем глобальный список с предыдущими значениями
-        # print(last_ls)
-        # print(number)
+            name_table)  # создание новой таблицы
+        last_ls = globals()[
+            "lStore_now_save{}".format(number_table)]  # получаем глобальный список с предыдущими значениями
         for note in range(1, len(last_ls)):  # переносим значения таблицы из глобального списка новую таблицу
             Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call={
                 'title': last_ls[note][1], },
                    success_message='Отмена редактирования!').choose(
-                get_table_name())
-        clear_table()  # сочищаем таблицу
+                name_table)
+        clear_table(name_table)  # очищаем таблицу
         number -= 1
+        if name_table == 'bookmarks':  # если выбрана таблица срочных дел bookmarks
+            notebook.set_current_page(0)  # переходим на вкладку, в которой происходит отмена изменений
+        elif name_table == 'bookmarks_medium':  # если выбрана таблица среднесрочных дел bookmarks_medium
+            notebook.set_current_page(1)  # переходим на вкладку, в которой происходит отмена изменений
+        elif name_table == 'bookmarks_perspective':  # если выбрана таблица перспективных дел bookmarks_perspective
+            notebook.set_current_page(2)  # переходим на вкладку, в которой происходит отмена изменений
+
         Option('List bookmarks by date', commands.ListBookmarksCommand(),
                success_message='Таблицы загружены!').choose(
-            'bookmarks')  # выводим на экран таблицу
+            name_table)  # выводим на экран таблицу
         number -= 1
         cancel_index = False
         btn_return.set_sensitive(True)
+        # try:  # временная проверка записей в памяти
+        #     print("")
+        #     print(number)
+        #     for num in range(number+1):
+        #         print(globals()["lStore_now_save{}".format(num)])
+        # except KeyError:
+        #     print("no")
 
 
 def text_edited(widget, path, text):  # функция записи во второй столбец таблицы редактируемого значения
@@ -454,7 +503,7 @@ def text_edited(widget, path, text):  # функция записи во вто�
         resize_window()
     Option('Edit a bookmark', commands.UpdateBookmarkCommand(),
            prep_call=get_bookmark_id_for_deletion, success_message='Заметка обновлена!').choose(get_table_name(), text)
-    clear_table()
+    clear_table(get_table_name())
     Option('List bookmarks by date', commands.ListBookmarksCommand(), success_message='Заметка обновлена!').choose(
         get_table_name())
     rename_number_cell(get_table_name())
