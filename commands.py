@@ -13,25 +13,31 @@ class Command(ABC):
         raise NotImplementedError('Команды должны реализовывать метод execute')
 
 
+class CreateTableBookmarkCommand(Command):  # команда добавления закладки
+    def execute(self, name, data=None, note=None):
+        persistence.create_table(name)  #
+        return True, None  #
+
+
 class AddBookmarkCommand(Command):  # команда добавления закладки
     def execute(self, name, data, note=None):
         data['date_added'] = datetime.today().strftime(
-            '%d.%m.%Y')  # .isoformat()  # <1> добавляет текущую дату и время при добавлении записи
-        persistence.create(name, data)  # <2>
-        return True, None  # <3>
+            '%d.%m.%Y')  # .isoformat()  # добавляет текущую дату и время при добавлении записи
+        persistence.create(name, data)  #
+        return True, None  #
 
 
 class ListBookmarksCommand(Command):  # команда для вызова на экран списка существующих закладок
-    def __init__(self, order_by='date_added'):  # <1>
+    def __init__(self, order_by='date_added'):  #
         self.order_by = order_by
 
     def execute(self, name, data=None, note=None):
-        return True, persistence.list(name, order_by=self.order_by)  # <2>
+        return True, persistence.list(name, order_by=self.order_by)  #
 
 
 class DeleteBookmarkCommand(Command):  # команда для удаления закладок
     def execute(self, name, data, note=None):
-        persistence.delete(name, data)  # <1> delete принимает словарь имен столбцов и сопоставляет пары значений
+        persistence.delete(name, data)  # delete принимает словарь имен столбцов и сопоставляет пары значений
         return True, None
 
 
@@ -39,9 +45,16 @@ class UpdateBookmarkCommand(Command):  # команда для изменени�
     def execute(self, name, data, note):
         # persistence.edit(name, data['id'], data['update'])  # <1> update принимает словарь имен столбцов и
         # # сопоставляет пары значений
-        persistence.edit(name, data, note)  # <1> update принимает словарь имен столбцов и
+        persistence.edit(name, data, note)  # update принимает словарь имен столбцов и
         # сопоставляет пары значений
         return True, None
+
+
+class DropBookmarkCommand(Command):  # команда для удаления таблицы
+    def execute(self, name, data=None, note=None):
+        persistence.drop(name)  # drop принимает словарь имен столбцов и сопоставляет пары значений
+        return True, None
+
 
 # class ResetIdBookmarkCommand: # команда для сброса автоинкремента
 #     def execute(self, name):
