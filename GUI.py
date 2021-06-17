@@ -1,14 +1,17 @@
 #!C:/msys64/mingw64/bin/python.exe
+import os
 from datetime import datetime
 
 import gi
 import ctypes
 import commands
-import keyboard
+import load_excel
+import load_json
+import load_pdf
+import load_word
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
-
 
 # whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
 
@@ -485,6 +488,104 @@ class Handler:
         # except KeyError:
         #     print("no")
 
+    def btn_excel_clicked_cb(self, button):  # выгрузка заметок в Excel
+        place = save_place.set_filename(
+            "C:" + os.path.join(os.environ['HOMEPATH'], 'Desktop'))
+        response = dialog_settings.run()
+        if response == Gtk.ResponseType.OK:
+            place = save_place.get_filename()
+        elif response == Gtk.ResponseType.CANCEL:
+            entry_sabject.set_text("Создание таблицы Excel отменено!")
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+            dialog_settings.hide()
+            return
+        dialog_settings.hide()
+        try:  # проверка удачной выгрузки
+            text = load_excel.create_a_report(lStore_now, lStore_medium, lStore_perspective, place)
+            if text == "OK":
+                entry_sabject.set_text("Таблица Excel сформирована!")
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("green"))
+            else:
+                entry_sabject.set_text("Сбой при формировании таблицы Excel!")
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+        except:  # если произошел сбой выгрузки
+            entry_sabject.set_text("Сбой при формировании таблицы Excel!")
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+
+    def btn_word_clicked_cb(self, button):  # выгрузка заметок в Word
+        place = save_place.set_filename(
+            "C:" + os.path.join(os.environ['HOMEPATH'], 'Desktop'))
+        response = dialog_settings.run()
+        if response == Gtk.ResponseType.OK:
+            place = save_place.get_filename()
+        elif response == Gtk.ResponseType.CANCEL:
+            entry_sabject.set_text("Создание документа Word отменено!")
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+            dialog_settings.hide()
+            return
+        dialog_settings.hide()
+        try:  # проверка удачной выгрузки
+            text = load_word.create_a_report(lStore_now, lStore_medium, lStore_perspective, place)
+            if text == "OK":
+                entry_sabject.set_text("Документ Word сформирован!")
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("green"))
+            elif text == "NO_FILE":
+                entry_sabject.set_text("Не найден шаблон load_word.docx!")
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+            else:
+                entry_sabject.set_text("Сбой при формировании документа Word!")
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+        except:  # если произошел сбой выгрузки
+            entry_sabject.set_text("Сбой при формировании документа Word!")
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+
+    def btn_json_clicked_cb(self, button):
+        place = save_place.set_filename(
+            "C:" + os.path.join(os.environ['HOMEPATH'], 'Desktop'))
+        response = dialog_settings.run()
+        if response == Gtk.ResponseType.OK:
+            place = save_place.get_filename()
+        elif response == Gtk.ResponseType.CANCEL:
+            entry_sabject.set_text("Создание файла json отменено!")
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+            dialog_settings.hide()
+            return
+        dialog_settings.hide()
+        try:  # проверка удачной выгрузки
+            text = load_json.create_a_report(lStore_now, lStore_medium, lStore_perspective, place)
+            if text == "OK":
+                entry_sabject.set_text("Файл json сформирован!")
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("green"))
+            else:
+                entry_sabject.set_text("Сбой при формировании файла json!")
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+        except:  # если произошел сбой выгрузки
+            entry_sabject.set_text("Сбой при формировании файла json!")
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+
+    def btn_pdf_clicked_cb(self, button):
+        place = save_place.set_filename(
+            "C:" + os.path.join(os.environ['HOMEPATH'], 'Desktop'))
+        response = dialog_settings.run()
+        if response == Gtk.ResponseType.OK:
+            place = save_place.get_filename()
+        elif response == Gtk.ResponseType.CANCEL:
+            entry_sabject.set_text("Создание файла pdf отменено!")
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+            dialog_settings.hide()
+            return
+        dialog_settings.hide()
+        try:  # проверка удачной выгрузки
+            text = load_pdf.create_a_report(lStore_now, lStore_medium, lStore_perspective, place)
+            if text == "OK":
+                entry_sabject.set_text("Файл pdf сформирован!")
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("green"))
+            else:
+                entry_sabject.set_text("Сбой при формировании файла pdf!")
+                entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+        except:  # если произошел сбой выгрузки
+            entry_sabject.set_text("Сбой при формировании файла pdf!")
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
 
 def text_edited(widget, path, text):  # функция записи во второй столбец таблицы редактируемого значения
     global count_width, count_change
@@ -536,6 +637,12 @@ lStore_perspective = abuilder.get_object("liststore_perspective")
 tree_now = abuilder.get_object("tree_view_now")
 tree_medium = abuilder.get_object("tree_view_medium")
 tree_perspective = abuilder.get_object("tree_view_perspective")
+
+dialog_settings = abuilder.get_object("dialog_settings")
+# whatis(dialog_settings)
+dialog_settings.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK)
+
+save_place = abuilder.get_object("save_place")
 
 for i, column_title in enumerate(  # загрузка в дерево столбцов и присвоение им наименований
         ["№", "Список срочных дел", "Дата"]
