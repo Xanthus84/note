@@ -9,9 +9,11 @@ import load_excel
 import load_json
 import load_pdf
 import load_word
+import load_dropbox
 
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
+
 
 # whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
 
@@ -160,6 +162,10 @@ def format_bookmark(bookmark):
         for field in bookmark
     )
 
+
+# # Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call=get_new_bookmark_data,
+#               success_message='Заметка добавлена!').choose(
+#            get_table_name())
 
 class Option:  # подключение текста меню к командам бизнес-логики
     def __init__(self, name, command, prep_call=None, success_message='{result}'):
@@ -586,6 +592,53 @@ class Handler:
         except:  # если произошел сбой выгрузки
             entry_sabject.set_text("Сбой при формировании файла pdf!")
             entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+
+    def save_dropbox_clicked_cb(self, button):
+        sabj = load_dropbox.Dropbox().load_to_dropbox('C:\Razrab-10\python\ToDoIt\\bookmarks.db')
+        if sabj == "Ошибка подключения!":
+            entry_sabject.set_text(str(sabj))
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+        else:
+            entry_sabject.set_text(str(sabj))
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("green"))
+
+    def load_from_dropbox_clicked_cb(self, button):
+        sabj = load_dropbox.Dropbox().save_file_from_dropbox('C:\Razrab-10\python\ToDoIt\\bookmarks.db')
+        if sabj == "Ошибка подключения!":
+            entry_sabject.set_text(str(sabj))
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+        else:
+            entry_sabject.set_text(str(sabj))
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("green"))
+            clear_table('bookmarks')
+            clear_table('bookmarks_medium')
+            clear_table('bookmarks_perspective')
+            Option('List bookmarks by date', commands.ListBookmarksCommand(),
+                   success_message='Таблицы загружены!').choose(
+                'bookmarks')  # загрузка таблицы bookmarks в 1-ю вкладку
+            notebook.next_page()  # переход на вторую вкладку
+            Option('List bookmarks by date', commands.ListBookmarksCommand(),
+                   success_message='Таблицы загружены!').choose(
+                'bookmarks_medium')  # загрузка таблицы bookmarks_medium во 2-ю вкладку
+            notebook.next_page()  # переход на третью вкладку
+            Option('List bookmarks by date', commands.ListBookmarksCommand(),
+                   success_message='Таблицы загружены!').choose(
+                'bookmarks_perspective')  # загрузка таблицы bookmarks_perspective в 3-ю вкладку
+            notebook.set_current_page(0)  # возвращение на первую вкладку
+            rename_number_cell('bookmarks')  # переименование строк в столбце для скрытия id
+            rename_number_cell('bookmarks_medium')  # переименование строк в столбце для скрытия id
+            rename_number_cell('bookmarks_perspective')  # переименование строк в столбце для скрытия id
+            # btn_return.set_sensitive(False)
+
+    def link_dropbox_clicked_cb(self, button):
+        sabj = load_dropbox.Dropbox().print_url()
+        if sabj == "Ошибка подключения!":
+            entry_sabject.set_text(str(sabj))
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("red"))
+        else:
+            entry_sabject.set_text(str(sabj))
+            entry_sabject.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse("green"))
+
 
 def text_edited(widget, path, text):  # функция записи во второй столбец таблицы редактируемого значения
     global count_width, count_change
