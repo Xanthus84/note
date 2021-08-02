@@ -82,7 +82,7 @@
     <property name="has-resize-grip">True</property>
     <signal name="key-press-event" handler="main_window_key_press_event_cb" swapped="no"/>
     <child>
-      <!-- n-columns=3 n-rows=4 -->
+      <!-- n-columns=3 n-rows=5 -->
       <object class="GtkGrid">
         <property name="visible">True</property>
         <property name="can-focus">False</property>
@@ -269,7 +269,7 @@
           </object>
           <packing>
             <property name="left-attach">0</property>
-            <property name="top-attach">3</property>
+            <property name="top-attach">4</property>
             <property name="width">3</property>
           </packing>
         </child>
@@ -391,6 +391,48 @@
             <property name="left-attach">0</property>
             <property name="top-attach">0</property>
             <property name="width">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="save_dropbox">
+            <property name="label" translatable="yes">Сохранить в
+    DropBox</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="save_dropbox_clicked_cb" swapped="no"/>
+          </object>
+          <packing>
+            <property name="left-attach">0</property>
+            <property name="top-attach">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="load_from_dropbox">
+            <property name="label" translatable="yes">Загрузить из
+    DropBox</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="load_from_dropbox_clicked_cb" swapped="no"/>
+          </object>
+          <packing>
+            <property name="left-attach">1</property>
+            <property name="top-attach">3</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="link_dropbox">
+            <property name="label" translatable="yes">Вывести ссылку 
+для скачивания</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="link_dropbox_clicked_cb" swapped="no"/>
+          </object>
+          <packing>
+            <property name="left-attach">2</property>
+            <property name="top-attach">3</property>
           </packing>
         </child>
       </object>
