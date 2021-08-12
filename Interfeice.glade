@@ -48,6 +48,10 @@
       <column type="gchararray"/>
       <!-- column-name gchararray2 -->
       <column type="gchararray"/>
+      <!-- column-name gboolean1 -->
+      <column type="gboolean"/>
+      <!-- column-name gchararray3 -->
+      <column type="gchararray"/>
     </columns>
   </object>
   <object class="GtkListStore" id="liststore_now">
@@ -58,6 +62,10 @@
       <column type="gchararray"/>
       <!-- column-name Дата -->
       <column type="gchararray"/>
+      <!-- column-name Отметка -->
+      <column type="gboolean"/>
+      <!-- column-name Цвет -->
+      <column type="gchararray"/>
     </columns>
   </object>
   <object class="GtkListStore" id="liststore_perspective">
@@ -67,6 +75,10 @@
       <!-- column-name gchararray1 -->
       <column type="gchararray"/>
       <!-- column-name gchararray2 -->
+      <column type="gchararray"/>
+      <!-- column-name gboolean1 -->
+      <column type="gboolean"/>
+      <!-- column-name gchararray3 -->
       <column type="gchararray"/>
     </columns>
   </object>
