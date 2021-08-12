@@ -14,7 +14,6 @@ import load_dropbox
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk
 
-
 # whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
 
 
@@ -61,6 +60,7 @@ def get_last_save_name():  # функция возвращает названи�
 
 
 def print_bookmarks(bookmarks, name):  # вывод таблицы в закладку
+    # pass
     global number
     if not cancel_index:
         lStore = memory_note(number, name)
@@ -175,14 +175,15 @@ class Option:  # подключение текста меню к команда�
         # программы
         self.success_message = success_message  # сообщение о выполнении программы
 
-    def choose(self, name, note=None):  # <4> вызывается, когда вариант действия выбран из меню
+    def choose(self, name, note=None, condition=None,
+               color=None):  # <4> вызывается, когда вариант действия выбран из меню
         if isinstance(self.prep_call, dict):
             data = self.prep_call
         elif self.prep_call:
             data = self.prep_call()
         else:
             data = None  # <5> вызывает подготовительный шаг, если он указан
-        success, result = self.command.execute(name, data, note)  # <3>
+        success, result = self.command.execute(name, data, note, condition, color)  # <3>
         formatted_result = ""
         if isinstance(result, list):  # <4>
             print_bookmarks(result, name)
@@ -221,8 +222,8 @@ def get_new_table():  # <4> функция, которая получает не
 def get_new_bookmark_data():  # <4> функция, которая получает необходимые данные для добавления новой закладки
     return {
         'title': get_user_input('Title'),
-        # 'url': 'Address',
-        # 'notes': 'note1',  # <5> примечания для закладки не являются обязательными,
+        'condition_bool': 0,
+        'text_color': '#000000',  # <5> примечания для закладки не являются обязательными,
         # # поэтому не продолжает предлагать их ввести
     }
 
@@ -237,6 +238,11 @@ def get_bookmark_id_for_deletion():  # <6> получает необходиму
             for i in range(len(lStore_now)):
                 path = Gtk.TreePath(i)
                 treeiter = lStore_now.get_iter(path)
+                print("lStore_now[path][0] = ", lStore_now[path][0])
+                print("len(lStore_now = ", len(lStore_now))
+                print("i = ", i)
+                print("treeiter = ", lStore_now.get_value(treeiter, 0))
+                print("iter_is_selected = ", selection_now.iter_is_selected(treeiter))
                 if selection_now.iter_is_selected(treeiter) == True:
                     return str(sort_now[lStore_now.get_value(treeiter, 0)])
         if notebook.get_current_page() == 1:
@@ -252,7 +258,21 @@ def get_bookmark_id_for_deletion():  # <6> получает необходиму
                 if selection_perspective.iter_is_selected(treeiter) == True:
                     return str(sort_perspective[lStore_perspective.get_value(treeiter, 0)])
     else:
-        return 0
+        return -10
+
+
+path_id = 0  # глобальная переменная для корректного определения выделенной строки при нажатии на toggle в ячейки с переходом без выделения
+
+
+def get_bookmark_id_for_toggle():  # функция определения id записи по номеру строки
+    if notebook.get_current_page() == 0:
+        # print("sort_now = ", sort_now)
+        # print("sort_now[path_id] = ", sort_now[int(path_id)])
+        return str(sort_now[int(path_id)])
+    if notebook.get_current_page() == 1:
+        return str(sort_medium[int(path_id)])
+    if notebook.get_current_page() == 2:
+        return str(sort_perspective[int(path_id)])
 
 
 def clear_table(name):  # функция очистки таблицы
@@ -433,7 +453,10 @@ class Handler:
             name_table)  # создание новой таблицы
         for note in range(1, len(last_ls)):  # загрузка в таблицу отмененных ранее данных
             Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call={
-                'title': last_ls[note][1], },
+                'title': last_ls[note][1],
+                'condition_bool': last_ls[note][3],
+                'text_color': last_ls[note][4],
+            },
                    success_message='Отмена редактирования!').choose(
                 name_table)
         clear_table(name_table)  # очищение изменяемой таблицы
@@ -468,7 +491,10 @@ class Handler:
             "lStore_now_save{}".format(number_table)]  # получаем глобальный список с предыдущими значениями
         for note in range(1, len(last_ls)):  # переносим значения таблицы из глобального списка новую таблицу
             Option('Add a bookmark', commands.AddBookmarkCommand(), prep_call={
-                'title': last_ls[note][1], },
+                'title': last_ls[note][1],
+                'condition_bool': last_ls[note][3],
+                'text_color': last_ls[note][4],
+            },
                    success_message='Отмена редактирования!').choose(
                 name_table)
         clear_table(name_table)  # очищаем таблицу
@@ -643,20 +669,91 @@ class Handler:
 def text_edited(widget, path, text):  # функция записи во второй столбец таблицы редактируемого значения
     global count_width, count_change
     btn_cancellation.set_sensitive(True)
+    condition = 0
+    color = "#000000"
     if notebook.get_current_page() == 0:  # добавление заметки в таблицу срочных дел bookmarks
         lStore_now[path][1] = text
+        condition = 1 if lStore_now[path][3] else 0
+        color = lStore_now[path][4]
     elif notebook.get_current_page() == 1:  # добавление заметки в таблицу среднесрочных дел bookmarks_medium
         lStore_medium[path][1] = text
+        condition = 1 if lStore_medium[path][3] else 0
+        color = lStore_medium[path][4]
     elif notebook.get_current_page() == 2:  # добавление заметки в таблицу среднесрочных дел bookmarks_perspective
         lStore_perspective[path][1] = text
+        condition = 1 if lStore_perspective[path][3] else 0
+        color = lStore_perspective[path][4]
     if GetTextDimensions(text, 11, "Cantarell") > count_width:
         count_width = GetTextDimensions(text, 11, "Cantarell")
         resize_window()
     else:
-        # get_width_height(get_table_name())
         resize_window()
     Option('Edit a bookmark', commands.UpdateBookmarkCommand(),
-           prep_call=get_bookmark_id_for_deletion, success_message='Заметка обновлена!').choose(get_table_name(), text)
+           prep_call=get_bookmark_id_for_deletion, success_message='Заметка обновлена!').choose(get_table_name(), text,
+                                                                                                condition, color)
+    clear_table(get_table_name())
+    Option('List bookmarks by date', commands.ListBookmarksCommand(), success_message='Заметка обновлена!').choose(
+        get_table_name())
+    rename_number_cell(get_table_name())
+
+
+def on_cell_toggled(widget,
+                    path):  # функция записи вnhtnbq столбец таблицы флага выполнения задания и выделения серым цветом выделенной строки
+    global path_id
+    condition = 0  # начальное значение флага, 0 - не активен
+    text = ""  # начальное значение текста заметки в строке
+    color = "#000000"  # начальное значение цвета шрифта, #000000 - черный
+    btn_cancellation.set_sensitive(True)
+    if notebook.get_current_page() == 0:  # добавление заметки в таблицу срочных дел bookmarks
+        lStore_now[path][3] = not lStore_now[path][3]  # инверсия значения флага
+        text = lStore_now[path][1]  # присвоение переменной text значения заметки в выбранной строке
+        condition = 1 if lStore_now[path][3] else 0  # присвоение переменной condition состояния флага
+        treeiter = lStore_now.get_iter(path)
+        if lStore_now[path][3]:
+            lStore_now.set(treeiter, 4, "#c9c9c9")
+            color = "#c9c9c9"
+        else:
+            lStore_now.set(treeiter, 4, "#000000")
+            color = "#000000"
+        path_id = str(sort_now[lStore_now[path][0]])
+        # print("path_id = ", path_id)
+        # print(str(sort_now[lStore_now[path][0]]))
+        # print("path = ",path)
+        # tree_now.set_cursor(lStore_now[path][0], tree_now.get_column(0), True)  # установление курсора на строке с переключателем
+        # path1 = Gtk.TreePath(lStore_now[path][0])  # получение переменной path для выделенной строки
+        # print("path1 = ", path1)
+        # # tree_now.row_activated(path1, column)  # активация курсора на строке с переключателем
+        # # column = tree_now.get_column(0)
+        # # tree_now.set_cursor((0,), column, start_editing=True)
+        # print(lStore_now[path][0])
+        # print(get_bookmark_id_for_deletion())
+    elif notebook.get_current_page() == 1:  # добавление заметки в таблицу среднесрочных дел bookmarks_medium
+        lStore_medium[path][3] = not lStore_medium[path][3]
+        condition = 1 if lStore_medium[path][3] else 0
+        text = lStore_medium[path][1]
+        treeiter = lStore_medium.get_iter(path)
+        if lStore_medium[path][3]:
+            lStore_medium.set(treeiter, 4, "#c9c9c9")
+            color = "#c9c9c9"
+        else:
+            lStore_medium.set(treeiter, 4, "#000000")
+            color = "#000000"
+        path_id = str(sort_medium[lStore_medium[path][0]])
+    elif notebook.get_current_page() == 2:  # добавление заметки в таблицу среднесрочных дел bookmarks_perspective
+        lStore_perspective[path][3] = not lStore_perspective[path][3]
+        condition = 1 if lStore_perspective[path][3] else 0
+        text = lStore_perspective[path][1]
+        treeiter = lStore_perspective.get_iter(path)
+        if lStore_perspective[path][3]:
+            lStore_perspective.set(treeiter, 4, "#c9c9c9")
+            color = "#c9c9c9"
+        else:
+            lStore_perspective.set(treeiter, 4, "#000000")
+            color = "#000000"
+        path_id = str(sort_perspective[lStore_perspective[path][0]])
+    Option('Edit a bookmark', commands.UpdateBookmarkCommand(),
+           prep_call=get_bookmark_id_for_toggle, success_message='Заметка обновлена!').choose(get_table_name(), text,
+                                                                                              condition, color)
     clear_table(get_table_name())
     Option('List bookmarks by date', commands.ListBookmarksCommand(), success_message='Заметка обновлена!').choose(
         get_table_name())
@@ -697,41 +794,104 @@ dialog_settings.add_buttons(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK
 
 save_place = abuilder.get_object("save_place")
 
-for i, column_title in enumerate(  # загрузка в дерево столбцов и присвоение им наименований
-        ["№", "Список срочных дел", "Дата"]
-):
-    renderer = Gtk.CellRendererText()
-    column = Gtk.TreeViewColumn(column_title, renderer, text=i)
-    tree_now.append_column(column)
-    if i == 1:
-        renderer.set_property("editable", True)  # делает редактируемым строки столбца 1
-        renderer.connect("edited", text_edited)  # запоминает введенное значение в строку
 
 for i, column_title in enumerate(  # загрузка в дерево столбцов и присвоение им наименований
-        ["№", "Список среднесрочных дел", "Дата"]
+        ["№", "Список срочных дел", "Дата", "Отметка", ""]
 ):
-    renderer = Gtk.CellRendererText()
-    column = Gtk.TreeViewColumn(column_title, renderer, text=i)
-    tree_medium.append_column(column)
+    if i == 3:
+        renderer_toggle = Gtk.CellRendererToggle()
+        # print(renderer_toggle)
+        renderer_toggle.set_property('activatable', True)
+        column = Gtk.TreeViewColumn(column_title, renderer_toggle, active=3)
+        tree_now.append_column(column)
+        renderer_toggle.connect("toggled", on_cell_toggled)
+
+        # whatis(renderer.set_property("toggle", True))
+    else:
+        renderer = Gtk.CellRendererText()
+        column = Gtk.TreeViewColumn(column_title, renderer, text=i)
+        column.add_attribute(renderer, "foreground",
+                             4)  # задает цвет текста в текстовых полях согласно цвету в строке столбца 4
+        tree_now.append_column(column)
+        # renderer.set_property('cell-background', "red")
+        # whatis(renderer)
+
     if i == 1:
         renderer.set_property("editable", True)  # делает редактируемым строки столбца 1
         renderer.connect("edited", text_edited)  # запоминает введенное значение в строку
+    if i == 4:
+        pass
+        renderer.set_property("visible", False)  # делает невидимыми данные столбца 4
+        # tree_now.set_headers_visible(False)  # делает невидимыми все заголовки столбцов
+
+# tree_now.override_background_color(Gtk.StateFlags.NORMAL,
+#                                            Gdk.RGBA(166, 0, 255, 255))  # меняет цвет фона дерева целиком
 
 for i, column_title in enumerate(  # загрузка в дерево столбцов и присвоение им наименований
-        ["№", "Список перспективных дел", "Дата"]
+        ["№", "Список среднесрочных дел", "Дата", "Отметка", ""]
 ):
-    renderer = Gtk.CellRendererText()
-    column = Gtk.TreeViewColumn(column_title, renderer, text=i)
-    tree_perspective.append_column(column)
+    if i == 3:
+        renderer_toggle = Gtk.CellRendererToggle()
+        # print(renderer_toggle)
+        renderer_toggle.set_property('activatable', True)
+        column = Gtk.TreeViewColumn(column_title, renderer_toggle, active=3)
+        tree_medium.append_column(column)
+        renderer_toggle.connect("toggled", on_cell_toggled)
+
+        # whatis(renderer.set_property("toggle", True))
+    else:
+        renderer = Gtk.CellRendererText()
+        column = Gtk.TreeViewColumn(column_title, renderer, text=i)
+        column.add_attribute(renderer, "foreground",
+                             4)  # задает цвет текста в текстовых полях согласно цвету в строке столбца 4
+        tree_medium.append_column(column)
+        # renderer.set_property('cell-background', "red")
+        # whatis(renderer)
+
     if i == 1:
         renderer.set_property("editable", True)  # делает редактируемым строки столбца 1
         renderer.connect("edited", text_edited)  # запоминает введенное значение в строку
+    if i == 4:
+        pass
+        renderer.set_property("visible", False)  # делает невидимыми данные столбца 4
+        # tree_now.set_headers_visible(False)  # делает невидимыми все заголовки столбцов
+
+for i, column_title in enumerate(  # загрузка в дерево столбцов и присвоение им наименований
+        ["№", "Список перспективных дел", "Дата", "Отметка", ""]
+):
+    if i == 3:
+        renderer_toggle = Gtk.CellRendererToggle()
+        # print(renderer_toggle)
+        renderer_toggle.set_property('activatable', True)
+        column = Gtk.TreeViewColumn(column_title, renderer_toggle, active=3)
+        tree_perspective.append_column(column)
+        renderer_toggle.connect("toggled", on_cell_toggled)
+
+        # whatis(renderer.set_property("toggle", True))
+    else:
+        renderer = Gtk.CellRendererText()
+        column = Gtk.TreeViewColumn(column_title, renderer, text=i)
+        column.add_attribute(renderer, "foreground",
+                             4)  # задает цвет текста в текстовых полях согласно цвету в строке столбца 4
+        tree_perspective.append_column(column)
+        # renderer.set_property('cell-background', "red")
+        # whatis(renderer)
+
+    if i == 1:
+        renderer.set_property("editable", True)  # делает редактируемым строки столбца 1
+        renderer.connect("edited", text_edited)  # запоминает введенное значение в строку
+    if i == 4:
+        pass
+        renderer.set_property("visible", False)  # делает невидимыми данные столбца 4
+        # tree_now.set_headers_visible(False)  # делает невидимыми все заголовки столбцов
+
+tree_now.set_property('activate-on-single-click', True)
 
 Window.set_title("ToDoIt")
 Window.set_icon_from_file("icon.ico")
 Window.show_all()
 
-# whatis(btn_cancellation.set_sensitive(False))
+# whatis(lStore_now)
 
 if __name__ == '__main__':
     Option('List bookmarks by date', commands.ListBookmarksCommand(),
