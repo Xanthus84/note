@@ -1,19 +1,21 @@
 import sqlite3
 
-#whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
+
+# whatis = lambda obj: print(type(obj), "\n\t" + "\n\t".join(dir(obj)))
 
 class DatabaseManager:
     def __init__(self, database_filename):
-        self.connection = sqlite3.connect(database_filename)  # <1> Создает и сохраняет соединение с БД для последующего использования
+        self.connection = sqlite3.connect(
+            database_filename)  # <1> Создает и сохраняет соединение с БД для последующего использования
 
     def __del__(self):
         self.connection.close()  # <2> Закрывает соединение когда дело сделано
 
     def _execute(self, statement, values=None):  # <1> values для плэйсхолдера, для защиты функции от спама
-        with self.connection:  #  создает контекст транзакции БД
+        with self.connection:  # создает контекст транзакции БД
             cursor = self.connection.cursor()  # создает курсор
             cursor.execute(statement, values or [])  # <2> использует курсор для выполнения инструкций
-            return cursor  #  возвращает курсор с сохраненным результатом
+            return cursor  # возвращает курсор с сохраненным результатом
 
     def create_table(self, table_name, columns):
         columns_with_types = [  # <1>  конструирует определения столбцов с их типами и ограничениями
@@ -30,11 +32,15 @@ class DatabaseManager:
     def drop_table(self, table_name):
         self._execute(f'DROP TABLE {table_name};')
 
-    def add(self, table_name, data): # добавление записи в таблицу БД SQlite
+    def add(self, table_name, data):  # добавление записи в таблицу БД SQlite
         placeholders = ', '.join('?' * len(data))
         column_names = ', '.join(data.keys())  # <1> ключами являются имена столбцов
-        column_values = tuple(data.values())  # <2> .values() возвращает объект dict_values, но execute требует список или картеж
-
+        column_values = tuple(
+            data.values())  # <2> .values() возвращает объект dict_values, но execute требует список или картеж
+        # print(placeholders)
+        # print(column_names)
+        # print(column_values)
+        # print("")
         self._execute(
             f'''
             INSERT INTO {table_name}
@@ -55,7 +61,7 @@ class DatabaseManager:
             tuple(criteria.values()),  # <2> использует аргумент values метода _execute в качестве значений на удаление
         )
 
-    def select(self, table_name, criteria=None, order_by=None): # метод отбора данных из таблиц SQL
+    def select(self, table_name, criteria=None, order_by=None):  # метод отбора данных из таблиц SQL
         criteria = criteria or {}  # <1> по умолчанию критерии могут быть пустыми, потому что нормально, если в таблице отбираются все записи
 
         query = f'SELECT * FROM {table_name}'
@@ -73,17 +79,23 @@ class DatabaseManager:
             tuple(criteria.values()),
         )
 
-    def update(self, table_name, criteria, note):
-            placeholders = [f'{column} = ?' for column in criteria.keys()]
-            update_criteria = ' AND '.join(placeholders)
-            self._execute(
-                f'''
+    def update(self, table_name, criteria, note, condition_bool, text_color):
+        placeholders = [f'{column} = ?' for column in criteria.keys()]
+        update_criteria = ' AND '.join(placeholders)
+        # print(placeholders)
+        # print(criteria.values())
+        # # print(update_criteria)
+        # print("")
+        self._execute(
+            f'''
                 UPDATE {table_name}
-                SET title = "{note}"
+                SET title = "{note}",
+                condition_bool = "{condition_bool}",
+                text_color = "{text_color}"
                 WHERE {update_criteria};
                 ''',
-                tuple(criteria.values()),
-            )
+            tuple(criteria.values()),
+        )
     # def reset_id(self, table_name):
     #     self._execute(
     #         f'''
@@ -93,4 +105,4 @@ class DatabaseManager:
     #         '''
     #     )
 
-#whatis(tuple)
+# whatis(tuple)

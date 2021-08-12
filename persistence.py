@@ -19,7 +19,7 @@ class PersistenceLayer(ABC):  #
         raise NotImplementedError('Команды должны реализовывать метод list')
 
     @abstractmethod
-    def edit(self, table_name, bookmark_id, bookmark_data):  # абстрактный метод редактирования заметки
+    def edit(self, table_name, bookmark_id, bookmark_data, bookmark_condition, bookmark_color):  # абстрактный метод редактирования заметки
         raise NotImplementedError('Команды должны реализовывать метод edit')
 
     @abstractmethod
@@ -43,6 +43,8 @@ class BookmarkDatabase(PersistenceLayer):  # класс команд по раб
                 # 'url': 'text not null',
                 # 'notes': 'text',
                 'date_added': 'text not null',
+                'condition_bool': 'integer not null',
+                'text_color': 'text not null',
             })
 
     def create_table(self, table_name):  # создание таблицы после ее удаления методом drop
@@ -52,6 +54,8 @@ class BookmarkDatabase(PersistenceLayer):  # класс команд по раб
             # 'url': 'text not null',
             # 'notes': 'text',
             'date_added': 'text not null',
+            'condition_bool': 'integer not null',
+            'text_color': 'text not null',
         })
 
     def create(self, table_name, bookmark_data):  # создание новой заметки
@@ -60,9 +64,9 @@ class BookmarkDatabase(PersistenceLayer):  # класс команд по раб
     def list(self, table_name, order_by=None):  # вывод списка заметок
         return self.db.select(table_name, order_by=order_by).fetchall()
 
-    def edit(self, table_name, bookmark_id, bookmark_data):  # редактирование заметки
+    def edit(self, table_name, bookmark_id, bookmark_data, condition_bool, bookmark_color):  # редактирование заметки
         # self.db.update(table_name, {'id': bookmark_id}, bookmark_data)
-        self.db.update(table_name, {'id': bookmark_id}, bookmark_data)
+        self.db.update(table_name, {'id': bookmark_id}, bookmark_data, condition_bool, bookmark_color)
 
     def delete(self, table_name, bookmark_id):  # удаление заметки
         self.db.delete(table_name, {'id': bookmark_id})
